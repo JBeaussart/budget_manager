@@ -19,8 +19,11 @@ import Layout from '../layouts/Layout.astro';
   } catch (error) {
     console.error('Erreur de déconnexion', error)
   } finally {
-    document.cookie = 'sb-access-token=; Path=/; Max-Age=0; SameSite=Lax'
-    document.cookie = 'sb-refresh-token=; Path=/; Max-Age=0; SameSite=Lax'
+    try {
+      await fetch('/api/auth/session', { method: 'DELETE', credentials: 'include' })
+    } catch (error) {
+      console.error('Impossible de nettoyer la session côté serveur', error)
+    }
     window.location.href = '/login'
   }
 </script>

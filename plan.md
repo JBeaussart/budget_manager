@@ -145,6 +145,7 @@ export const supabase = createClient(
 - [x] Appeler `supabase.auth.signUp`.
 - [x] Si session immédiate, persister les cookies puis rediriger vers `/app`; sinon afficher un message de confirmation email.
 
+- [x] Ajouter `src/pages/api/auth/session.ts` pour poser/supprimer les cookies Supabase côté serveur (HTTP-only) via `POST`/`DELETE`.
 - [x] Ajouter une page/route de déconnexion (`src/pages/logout.astro`) qui appelle `supabase.auth.signOut()` côté client puis redirige vers `/login`.
 **Critères d’acceptation**
 - On peut créer un compte, se connecter, se déconnecter.

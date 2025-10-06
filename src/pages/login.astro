@@ -73,20 +73,24 @@ import Layout from '../layouts/Layout.astro';
   }
 
   const persistSessionCookies = async (session) => {
-    let activeSession = session
-
-    if (!activeSession) {
-      const { data } = await supabase.auth.getSession()
-      activeSession = data?.session ?? null
+    if (!session) {
+      throw new Error('Session Supabase absente après la connexion')
     }
 
-    if (!activeSession) return
+    const response = await fetch('/api/auth/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        expires_in: session.expires_in,
+      }),
+      credentials: 'include',
+    })
 
-    const maxAge = Math.max(activeSession.expires_in ?? 3600, 60)
-    document.cookie = `sb-access-token=${activeSession.access_token}; Path=/; Max-Age=${maxAge}; SameSite=Lax`
-
-    if (activeSession.refresh_token) {
-      document.cookie = `sb-refresh-token=${activeSession.refresh_token}; Path=/; Max-Age=${60 * 60 * 24 * 365}; SameSite=Lax`
+    if (!response.ok) {
+      const details = await response.text()
+      throw new Error(`Impossible de synchroniser la session (${response.status}): ${details}`)
     }
   }
 

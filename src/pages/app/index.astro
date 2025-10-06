@@ -1,9 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro'
-import { supabase } from '../../lib/supabaseClient'
 
-const { data, error } = await supabase.auth.getUser()
-const user = data?.user
+export const prerender = false
 ---
 
 <Layout>
@@ -13,9 +11,7 @@ const user = data?.user
         <div class="space-y-1">
           <p class="text-sm uppercase tracking-wide text-emerald-500">Mon Budget</p>
           <h1 class="text-2xl font-semibold text-slate-900">Espace personnel</h1>
-          <p class="text-sm text-slate-600">
-            {user ? `Connecté en tant que ${user.email}` : 'Utilisateur non identifié'}
-          </p>
+          <p id="current-user" class="text-sm text-slate-600">Chargement…</p>
         </div>
         <nav class="flex items-center gap-3 text-sm font-medium text-slate-600">
           <a href="/app/dashboard" class="rounded-lg px-3 py-2 transition hover:bg-emerald-50 hover:text-emerald-600">Dashboard</a>
@@ -50,3 +46,27 @@ const user = data?.user
     </section>
   </main>
 </Layout>
+
+<script type="module">
+  import { supabase } from '/src/lib/supabaseClient'
+
+  const userLabel = document.querySelector('#current-user')
+
+  try {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser()
+
+    if (error) throw error
+
+    if (user?.email) {
+      userLabel.textContent = `Connecté en tant que ${user.email}`
+    } else {
+      userLabel.textContent = 'Utilisateur non identifié'
+    }
+  } catch (error) {
+    console.error('[app/index] getUser failed', error)
+    userLabel.textContent = 'Utilisateur non identifié'
+  }
+</script>
