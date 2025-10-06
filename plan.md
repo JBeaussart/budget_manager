@@ -75,7 +75,7 @@ PUBLIC_SUPABASE_ANON_KEY=""
 
 ## 5) Base de données : tables & RLS
 **Dans Supabase (SQL Editor)**
-- [ ] Exécuter le SQL suivant :
+- [x] Exécuter le SQL suivant :
 ```sql
 create table if not exists public.transactions (
   id            uuid primary key default gen_random_uuid(),
@@ -131,7 +131,7 @@ export const supabase = createClient(
 )
 ```
 **Critères d’acceptation**
-- Importable sans erreur dans des composants/pages.
+- [x] Importable sans erreur dans des composants/pages.
 
 ---
 
