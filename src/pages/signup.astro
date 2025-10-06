@@ -6,46 +6,45 @@ import Layout from '../layouts/Layout.astro';
   <section class="min-h-screen flex items-center justify-center bg-slate-50 py-16">
     <div class="w-full max-w-md space-y-6 rounded-2xl bg-white p-8 shadow-xl ring-1 ring-slate-900/5">
       <header class="space-y-2 text-center">
-        <h1 class="text-2xl font-semibold text-slate-900">Connexion</h1>
+        <h1 class="text-2xl font-semibold text-slate-900">Créer un compte</h1>
         <p class="text-sm text-slate-600">
-          Connecte-toi pour accéder à ton budget. Pas encore de compte ?
-          <a href="/signup" class="font-semibold text-emerald-600 hover:text-emerald-500">Crée-le ici</a>.
+          Renseigne ton e-mail et un mot de passe pour commencer. Tu as déjà un compte ?
+          <a href="/login" class="font-semibold text-emerald-600 hover:text-emerald-500">Connecte-toi ici</a>.
         </p>
       </header>
 
-      <form id="signin-form" class="space-y-4" autocomplete="on">
+      <form id="signup-form" class="space-y-4" autocomplete="on">
         <div class="space-y-1">
-          <label for="signin-email" class="text-sm font-medium text-slate-800">Adresse e-mail</label>
+          <label for="signup-email" class="text-sm font-medium text-slate-800">Adresse e-mail</label>
           <input
-            id="signin-email"
+            id="signup-email"
             type="email"
             name="email"
             required
             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
-            placeholder="ton.email@example.com"
+            placeholder="nouvel.utilisateur@example.com"
           />
         </div>
 
         <div class="space-y-1">
-          <label for="signin-password" class="text-sm font-medium text-slate-800">Mot de passe</label>
+          <label for="signup-password" class="text-sm font-medium text-slate-800">Mot de passe</label>
           <input
-            id="signin-password"
+            id="signup-password"
             type="password"
             name="password"
             minlength="6"
             required
             class="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
-            placeholder="••••••"
+            placeholder="Minimum 6 caractères"
           />
         </div>
 
         <button
           type="submit"
-          class="inline-flex w-full items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+          class="inline-flex w-full items-center justify-center rounded-lg border border-emerald-500 bg-white px-4 py-2 text-sm font-semibold text-emerald-600 transition hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
         >
-          Se connecter
+          Créer mon compte
         </button>
-
       </form>
 
       <div id="feedback" role="status" class="min-h-[1.5rem] text-center text-sm"></div>
@@ -56,9 +55,9 @@ import Layout from '../layouts/Layout.astro';
 <script type="module">
   import { supabase } from '/src/lib/supabaseClient'
 
-  const form = document.querySelector('#signin-form')
-  const emailInput = document.querySelector('#signin-email')
-  const passwordInput = document.querySelector('#signin-password')
+  const form = document.querySelector('#signup-form')
+  const emailInput = document.querySelector('#signup-email')
+  const passwordInput = document.querySelector('#signup-password')
   const feedback = document.querySelector('#feedback')
 
   const showMessage = (message, type = 'info') => {
@@ -91,7 +90,7 @@ import Layout from '../layouts/Layout.astro';
   }
 
   const redirectAfterAuth = () => {
-    showMessage('Redirection…', 'success')
+    showMessage('Compte créé, redirection…', 'success')
     window.location.href = '/app'
   }
 
@@ -106,14 +105,20 @@ import Layout from '../layouts/Layout.astro';
     }
 
     try {
-      showMessage('Connexion en cours…')
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      showMessage('Création du compte…')
+      const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) throw error
-      await persistSessionCookies(data.session)
-      redirectAfterAuth()
+
+      if (data?.session) {
+        await persistSessionCookies(data.session)
+        redirectAfterAuth()
+        return
+      }
+
+      showMessage('Compte créé ! Vérifie ta boîte mail pour confirmer.', 'success')
     } catch (error) {
       console.error(error)
-      showMessage(error.message ?? 'Connexion impossible.', 'error')
+      showMessage(error.message ?? 'Impossible de créer le compte.', 'error')
     }
   })
 </script>

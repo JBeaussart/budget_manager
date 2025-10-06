@@ -137,18 +137,14 @@ export const supabase = createClient(
 
 ## 7) Pages d’authentification
 **Créer** `src/pages/login.astro`
-- [x] Formulaire email + mot de passe.
-- [x] Boutons : « Se connecter », « Créer un compte », « Magic link ».
-- [x] Appeler :
-```ts
-// sign in
-await supabase.auth.signInWithPassword({ email, password })
-// sign up
-await supabase.auth.signUp({ email, password })
-// magic link
-await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: new URL('/app', window.location.origin).toString() }})
-```
-- [x] Après les actions auth, synchroniser les tokens Supabase dans des cookies (`sb-access-token`, `sb-refresh-token`) pour que le middleware puisse les lire.
+- [x] Formulaire de connexion (email + mot de passe).
+- [x] Appeler `supabase.auth.signInWithPassword` et synchroniser les cookies (`sb-access-token`, `sb-refresh-token`).
+
+**Créer** `src/pages/signup.astro`
+- [x] Formulaire de création (email + mot de passe).
+- [x] Appeler `supabase.auth.signUp`.
+- [x] Si session immédiate, persister les cookies puis rediriger vers `/app`; sinon afficher un message de confirmation email.
+
 - [x] Ajouter une page/route de déconnexion (`src/pages/logout.astro`) qui appelle `supabase.auth.signOut()` côté client puis redirige vers `/login`.
 **Critères d’acceptation**
 - On peut créer un compte, se connecter, se déconnecter.
