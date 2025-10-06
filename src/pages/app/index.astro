@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro'
-import { supabase } from '/src/lib/supabaseClient'
+import { supabase } from '../../lib/supabaseClient'
 
 const { data, error } = await supabase.auth.getUser()
 const user = data?.user
