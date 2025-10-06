@@ -41,6 +41,19 @@ All commands are run from the root of the project, from a terminal:
 | `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
 | `npm run astro -- --help` | Get help using the Astro CLI                     |
 
+## 🔐 Environment Variables
+
+Create a `.env` file (ignored by git) based on `.env.example` and fill in your Supabase credentials:
+
+```
+PUBLIC_SUPABASE_URL="<YOUR_SUPABASE_URL>"
+PUBLIC_SUPABASE_ANON_KEY="<YOUR_SUPABASE_ANON_KEY>"
+# Optional server-side key (keep private)
+SUPABASE_SERVICE_ROLE_KEY="<YOUR_SUPABASE_SERVICE_ROLE_KEY>"
+```
+
+The `.env.example` file is tracked in the repo so collaborators know which variables are required. Configure the same values in your hosting provider (Netlify) before deploying.
+
 ## 👀 Want to learn more?
 
 Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).

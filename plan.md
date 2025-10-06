@@ -28,13 +28,13 @@
 
 ## 2) Structure de dossiers
 **Créer**
-- [ ] `src/lib/` (utils, clients)
-- [ ] `src/pages/api/` (endpoints serverless)
-- [ ] `src/pages/app/` (pages protégées)
-- [ ] `src/components/` (UI)
-- [ ] `src/styles/` (styles globaux)
-- [ ] `src/styles/global.css` (ou `tailwind.css`) avec `@import "tailwindcss";`
-- [ ] Import global des styles Tailwind dans le layout principal (`src/layouts/BaseLayout.astro` ou équivalent)
+- [x] `src/lib/` (utils, clients)
+- [x] `src/pages/api/` (endpoints serverless)
+- [x] `src/pages/app/` (pages protégées)
+- [x] `src/components/` (UI)
+- [x] `src/styles/` (styles globaux)
+- [x] `src/styles/global.css` (ou `tailwind.css`) avec `@import "tailwindcss";`
+- [x] Import global des styles Tailwind dans le layout principal (`src/layouts/BaseLayout.astro` ou équivalent)
 
 **Critères d’acceptation**
 - Arborescence présente dans le repo.
@@ -44,14 +44,14 @@
 
 ## 3) Variables d’environnement
 **Créer** `.env` (développement) et `.env.example`
-- [ ] Ajouter :
+- [x] Ajouter :
 ```
 PUBLIC_SUPABASE_URL=""
 PUBLIC_SUPABASE_ANON_KEY=""
 # (Optionnel serveur) SUPABASE_SERVICE_ROLE_KEY=""
 ```
-- [ ] Compléter `.env.example` avec des placeholders explicites (`<YOUR_SUPABASE_URL>`…) et le **commiter** tout de suite.
-- [ ] Vérifier que `.env` est listé dans `.gitignore` et conserver les vraies valeurs uniquement en local.
+- [x] Compléter `.env.example` avec des placeholders explicites (`<YOUR_SUPABASE_URL>`…) et le **commiter** tout de suite.
+- [x] Vérifier que `.env` est listé dans `.gitignore` et conserver les vraies valeurs uniquement en local.
 
 **Critères d’acceptation**
 - `.env.example` committé, `.env` ignoré par git (via `.gitignore`).
@@ -61,11 +61,11 @@ PUBLIC_SUPABASE_ANON_KEY=""
 
 ## 4) Projet Supabase
 **Actions**
-- [ ] Créer un **projet Supabase**.
-- [ ] Récupérer **Project URL** et **anon key** (Settings → API).
-- [ ] Renseigner ces valeurs dans `.env`.
-- [ ] Mettre à jour les placeholders de `.env.example` (`<YOUR_SUPABASE_URL>`, etc.) pour refléter la structure attendue.
-- [ ] Stocker les valeurs réelles dans un gestionnaire de secrets et noter qu’elles devront être saisies dans Netlify (étape 18).
+- [x] Créer un **projet Supabase**.
+- [x] Récupérer **Project URL** et **anon key** (Settings → API).
+- [x] Renseigner ces valeurs dans `.env`.
+- [x] Mettre à jour les placeholders de `.env.example` (`<YOUR_SUPABASE_URL>`, etc.) pour refléter la structure attendue.
+- [x] Stocker les valeurs réelles dans un gestionnaire de secrets et noter qu’elles devront être saisies dans Netlify (étape 18).
 
 **Critères d’acceptation**
 - `PUBLIC_SUPABASE_URL` et `PUBLIC_SUPABASE_ANON_KEY` valides.
