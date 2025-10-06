@@ -148,6 +148,7 @@ await supabase.auth.signUp({ email, password })
 // magic link
 await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: new URL('/app', window.location.origin).toString() }})
 ```
+- [x] Après les actions auth, synchroniser les tokens Supabase dans des cookies (`sb-access-token`, `sb-refresh-token`) pour que le middleware puisse les lire.
 - [x] Ajouter une page/route de déconnexion (`src/pages/logout.astro`) qui appelle `supabase.auth.signOut()` côté client puis redirige vers `/login`.
 **Critères d’acceptation**
 - On peut créer un compte, se connecter, se déconnecter.
@@ -158,14 +159,24 @@ await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: new URL('
 **Créer** `src/middleware.ts`
 ```ts
 import type { MiddlewareHandler } from 'astro'
-import { supabase } from './lib/supabaseClient'
+
+const PROTECTED_PREFIX = '/app'
 
 export const onRequest: MiddlewareHandler = async (ctx, next) => {
   const url = new URL(ctx.request.url)
-  if (url.pathname.startsWith('/app')) {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return ctx.redirect('/login')
+
+  if (!url.pathname.startsWith(PROTECTED_PREFIX)) {
+    return next()
   }
+
+  const accessToken = ctx.cookies.get('sb-access-token')?.value
+  const refreshToken = ctx.cookies.get('sb-refresh-token')?.value
+
+  if (!accessToken && !refreshToken) {
+    const params = new URLSearchParams({ redirectTo: url.pathname + url.search })
+    return ctx.redirect(`/login?${params.toString()}`)
+  }
+
   return next()
 }
 ```

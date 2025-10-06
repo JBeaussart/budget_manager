@@ -85,6 +85,20 @@ import Layout from '../layouts/Layout.astro';
     }`
   }
 
+  const persistSessionCookies = async () => {
+    const { data } = await supabase.auth.getSession()
+    const session = data?.session
+    if (!session) return
+
+    const maxAge = Math.max(session.expires_in ?? 3600, 60)
+    document.cookie = `sb-access-token=${session.access_token}; Path=/; Max-Age=${maxAge}; SameSite=Lax`
+
+    if (session.refresh_token) {
+      // Refresh tokens vivent longtemps, on les garde un an mais on pourra affiner plus tard.
+      document.cookie = `sb-refresh-token=${session.refresh_token}; Path=/; Max-Age=${60 * 60 * 24 * 365}; SameSite=Lax`
+    }
+  }
+
   const handleAction = async (action) => {
     const email = emailInput.value.trim()
     const password = passwordInput.value
@@ -104,6 +118,7 @@ import Layout from '../layouts/Layout.astro';
         }
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
+        await persistSessionCookies()
         showMessage('Connexion réussie, redirection…', 'success')
         window.location.href = '/app'
         return
@@ -116,6 +131,7 @@ import Layout from '../layouts/Layout.astro';
         }
         const { error } = await supabase.auth.signUp({ email, password })
         if (error) throw error
+        await persistSessionCookies()
         showMessage('Compte créé ! Vérifie ta boîte mail pour confirmer.', 'success')
         return
       }
@@ -128,6 +144,7 @@ import Layout from '../layouts/Layout.astro';
           },
         })
         if (error) throw error
+        await persistSessionCookies()
         showMessage('Lien magique envoyé. Vérifie ta boîte mail !', 'success')
         return
       }
