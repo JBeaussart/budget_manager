@@ -189,8 +189,8 @@ export const onRequest: MiddlewareHandler = async (ctx, next) => {
 
 ## 9) Page shell protégée
 **Créer** `src/pages/app/index.astro`
-- [ ] Layout simple avec navbar (Mon Budget, Importer, Déconnexion).
-- [ ] Appeler `supabase.auth.getUser()` et afficher l’email.
+- [x] Layout simple avec navbar (Mon Budget, Importer, Déconnexion).
+- [x] Appeler `supabase.auth.getUser()` et afficher l’email.
 
 **Critères d’acceptation**
 - Page accessible uniquement connecté, affiche l’utilisateur courant.
