@@ -24,6 +24,6 @@ import Layout from '../layouts/Layout.astro';
     } catch (error) {
       console.error('Impossible de nettoyer la session côté serveur', error)
     }
-    window.location.href = '/login'
+    window.location.href = '/login?auth=none'
   }
 </script>

@@ -1,210 +1,704 @@
 ---
-import astroLogo from '../assets/astro.svg';
-import background from '../assets/background.svg';
+interface Props {
+  defaultAuth?: 'login' | 'signup'
+}
+
+const { defaultAuth = null } = Astro.props as Props
+
+const features = [
+  {
+    title: "Import CSV assisté",
+    description:
+      "Analyse automatique du séparateur, prévisualisation des lignes et mapping intuitif des colonnes pour préparer vos transactions."
+  },
+  {
+    title: "Catégorisation intelligente",
+    description:
+      "Définissez des règles souples pour classer vos dépenses et revenus, gardez une trace claire de chaque contrepartie."
+  },
+  {
+    title: "Dashboard clair",
+    description:
+      "Suivez revenus, dépenses et épargne mois par mois, identifiez vos postes clés et vos tendances en quelques secondes."
+  }
+]
+
+const steps = [
+  {
+    label: "01",
+    title: "Créez votre compte",
+    description:
+      "Activez Supabase Auth et connectez-vous en toute simplicité via les pages `/signup` et `/login` déjà prêtes."
+  },
+  {
+    label: "02",
+    title: "Importez votre relevé",
+    description:
+      "Glissez votre CSV, mappez les colonnes puis validez. L'API `/api/ingest` s'occupe d'insérer les lignes avec RLS."
+  },
+  {
+    label: "03",
+    title: "Pilotez votre budget",
+    description:
+      "Consultez le tableau de transactions, exportez vos données et visualisez votre budget mensuel sur le dashboard."
+  }
+]
+
+const faqs = [
+  {
+    question: "Comment sont sécurisées mes données ?",
+    answer:
+      "Chaque transaction est isolée via les policies RLS de Supabase. Les tokens d'accès sont stockés en cookies HTTP-only."
+  },
+  {
+    question: "Puis-je personnaliser les catégories ?",
+    answer:
+      "Oui, le plan prévoit un éditeur de règles et une future table `categories` pour adapter votre classification."
+  },
+  {
+    question: "Quid du déploiement ?",
+    answer:
+      "Le projet est pensé pour Netlify. Ajoutez l'adapter Astro, configurez vos variables d'environnement et vous êtes prêt."
+  }
+]
+
+const codeSnippet = `const rows = await parseCsv(file)
+const normalized = rows.map((row) =>
+  normalizeRow(row, columnMap)
+)
+
+await fetch('/api/ingest', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + accessToken,
+  },
+  body: JSON.stringify({ rows: normalized }),
+})`
 ---
 
-<div id="container">
-	<img id="background" src={background.src} alt="" fetchpriority="high" />
-	<main>
-		<section id="hero">
-			<a href="https://astro.build"
-				><img src={astroLogo.src} width="115" height="48" alt="Astro Homepage" /></a
-			>
-			<h1>
-				To get started, open the <code><pre>src/pages</pre></code> directory in your project.
-			</h1>
-			<section id="links">
-				<a class="button" href="https://docs.astro.build">Read our docs</a>
-				<a href="https://astro.build/chat"
-					>Join our Discord <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 127.14 96.36"
-						><path
-							fill="currentColor"
-							d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.89 105.89 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21a105.73 105.73 0 0 0 32.17 16.15 77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1 105.25 105.25 0 0 0 32.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15ZM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53s-5.05 12.69-11.44 12.69Zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.44-12.74S96.23 46 96.12 53s-5.04 12.69-11.43 12.69Z"
-						></path></svg
-					>
-				</a>
-			</section>
-		</section>
-	</main>
+<div class="bg-slate-50 text-slate-900" data-default-auth={defaultAuth ?? ''}>
+  <header class="relative overflow-hidden bg-gradient-to-br from-emerald-500 via-emerald-600 to-slate-900 text-white">
+    <div class="absolute inset-0 opacity-20">
+      <div class="absolute -top-32 right-12 h-72 w-72 rounded-full bg-emerald-300 blur-3xl"></div>
+      <div class="absolute bottom-0 left-20 h-80 w-80 rounded-full bg-slate-100/40 blur-3xl"></div>
+    </div>
 
-	<a href="https://astro.build/blog/astro-5/" id="news" class="box">
-		<svg width="32" height="32" fill="none" xmlns="http://www.w3.org/2000/svg"
-			><path
-				d="M24.667 12c1.333 1.414 2 3.192 2 5.334 0 4.62-4.934 5.7-7.334 12C18.444 28.567 18 27.456 18 26c0-4.642 6.667-7.053 6.667-14Zm-5.334-5.333c1.6 1.65 2.4 3.43 2.4 5.333 0 6.602-8.06 7.59-6.4 17.334C13.111 27.787 12 25.564 12 22.666c0-4.434 7.333-8 7.333-16Zm-6-5.333C15.111 3.555 16 5.556 16 7.333c0 8.333-11.333 10.962-5.333 22-3.488-.774-6-4-6-8 0-8.667 8.666-10 8.666-20Z"
-				fill="#111827"></path></svg
-		>
-		<h2>What's New in Astro 5.0?</h2>
-		<p>
-			From content layers to server islands, click to learn more about the new features and
-			improvements in Astro 5.0
-		</p>
-	</a>
+    <div class="relative mx-auto max-w-6xl px-6 pb-24 pt-16 sm:pt-20">
+      <nav class="flex w-full items-center justify-between text-sm font-medium">
+        <a href="/" class="flex items-center gap-2 text-white/90">
+          <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/30 backdrop-blur">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              class="h-5 w-5 text-white"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.5"
+                d="M3.75 6.75h13.5a2.25 2.25 0 0 1 2.25 2.25v6a2.25 2.25 0 0 1-2.25 2.25h-13.5a2.25 2.25 0 0 1-2.25-2.25v-6a2.25 2.25 0 0 1 2.25-2.25Zm0 0V5.25a2.25 2.25 0 0 1 2.25-2.25h8.379a2.25 2.25 0 0 1 1.591.659l1.621 1.621a2.25 2.25 0 0 1 .659 1.591V6.75M15 12a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Z"
+              />
+            </svg>
+          </span>
+          <span class="tracking-wide uppercase">Budget Manager</span>
+        </a>
+        <div class="hidden items-center gap-4 sm:flex">
+          <a href="#workflow" class="text-white/70 transition hover:text-white">Roadmap</a>
+          <a href="#features" class="text-white/70 transition hover:text-white">Fonctionnalités</a>
+          <a href="#faq" class="text-white/70 transition hover:text-white">FAQ</a>
+        </div>
+        <div class="flex items-center gap-3">
+          <a
+            href="/login"
+            data-open-auth="login"
+            class="hidden rounded-lg px-3 py-2 text-white/80 ring-1 ring-white/40 transition hover:text-white hover:ring-white/80 sm:inline-flex"
+          >
+            Connexion
+          </a>
+          <a
+            href="/signup"
+            data-open-auth="signup"
+            class="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-emerald-600 shadow-sm transition hover:bg-emerald-50"
+          >
+            Commencer
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="h-4 w-4">
+              <path
+                fill-rule="evenodd"
+                d="M3.293 9.293a1 1 0 0 1 1.414 0L9 13.586V4a1 1 0 1 1 2 0v9.586l4.293-4.293a1 1 0 0 1 1.414 1.414l-6 6a1 1 0 0 1-1.414 0l-6-6a1 1 0 0 1 0-1.414Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </a>
+        </div>
+      </nav>
+
+      <div class="mt-12 flex flex-col gap-10 lg:flex-row lg:items-center lg:gap-16">
+        <div class="w-full space-y-6 lg:w-1/2">
+          <p class="text-sm uppercase tracking-[0.3em] text-white/70">Pilotez vos finances</p>
+          <h1 class="text-4xl font-semibold leading-tight sm:text-5xl">
+            Importez, classez et visualisez votre budget sans feuille de calcul.
+          </h1>
+          <p class="max-w-xl text-base text-white/80 sm:text-lg">
+          Budget Manager est un MVP Astro + Supabase conçu pour automatiser l'import de relevés bancaires, appliquer vos règles de catégorisation et obtenir un tableau de bord clair en quelques minutes.
+        </p>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <a
+            href="/signup"
+            data-open-auth="signup"
+            class="inline-flex items-center justify-center rounded-lg bg-white px-5 py-3 text-sm font-semibold text-emerald-600 shadow-md transition hover:bg-emerald-50"
+          >
+            Créer mon compte gratuit
+          </a>
+          <a
+            href="#features"
+            class="inline-flex items-center justify-center rounded-lg px-5 py-3 text-sm font-semibold text-white/80 ring-1 ring-white/30 transition hover:text-white hover:ring-white/60"
+          >
+            Explorer les fonctionnalités
+          </a>
+        </div>
+        <dl class="grid gap-6 border-t border-white/10 pt-6 text-sm text-white/70 sm:grid-cols-3">
+          <div>
+            <dt class="font-semibold text-white">Import CSV guidé</dt>
+            <dd>Prévisualisation 20 lignes, mapping rapide.</dd>
+          </div>
+          <div>
+            <dt class="font-semibold text-white">Sécurité Supabase</dt>
+            <dd>RLS prête à l'emploi et cookies HTTP-only.</dd>
+          </div>
+          <div>
+            <dt class="font-semibold text-white">Rapidité</dt>
+            <dd>Astro 5 + Tailwind pour une UX fluide.</dd>
+          </div>
+        </dl>
+      </div>
+
+        <div class="relative w-full rounded-3xl bg-white/5 p-6 ring-1 ring-white/10 backdrop-blur lg:w-1/2">
+          <div class="space-y-4 rounded-2xl bg-slate-900/40 p-6 shadow-xl">
+            <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/50">
+              <span>Pipeline</span>
+              <span>Astro • Supabase</span>
+            </div>
+            <div class="space-y-3 text-sm text-white/80">
+              <div class="flex items-start gap-3">
+                <span class="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-100">1</span>
+                <div>
+                  <p class="font-semibold text-white">Upload CSV</p>
+                  <p>Analyse automatique des colonnes via Papa Parse.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <span class="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-100">2</span>
+                <div>
+                  <p class="font-semibold text-white">Normalisation</p>
+                  <p>Contrôle typé avec Zod pour sécuriser les montants et les dates.</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <span class="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-100">3</span>
+                <div>
+                  <p class="font-semibold text-white">Insertion Supabase</p>
+                  <p>Transactions liées à l'utilisateur grâce aux policies RLS.</p>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-xl bg-white/5 p-4 text-xs text-white/70 ring-1 ring-white/10">
+              <p>
+                Configurez les étapes restantes via <code class="rounded bg-black/40 px-2 py-1 font-mono text-xs">plan.md</code> et déployez sur Netlify en quelques commandes.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto flex max-w-6xl flex-col gap-24 px-6 py-24" id="features">
+    <section class="space-y-8">
+      <div class="space-y-3 text-center">
+        <p class="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-500">Fonctionnalités clés</p>
+        <h2 class="text-3xl font-semibold text-slate-900 sm:text-4xl">Tout pour garder la maîtrise de votre budget</h2>
+        <p class="mx-auto max-w-2xl text-base text-slate-600">
+          L'architecture Astro + Supabase met l'accent sur la rapidité de mise en œuvre et la sécurité côté base.
+        </p>
+      </div>
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {features.map((feature) => (
+          <article class="flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+            <header class="space-y-2">
+              <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-5 w-5">
+                  <path d="M4.5 3.75A3.75 3.75 0 0 1 8.25 0h7.5A3.75 3.75 0 0 1 19.5 3.75v16.5a3.75 3.75 0 0 1-3.75 3.75h-7.5A3.75 3.75 0 0 1 4.5 20.25Zm3 2.25a.75.75 0 0 0 0 1.5h9a.75.75 0 0 0 0-1.5Zm0 4.5a.75.75 0 0 0 0 1.5h6a.75.75 0 0 0 0-1.5Zm0 4.5a.75.75 0 0 0 0 1.5h6a.75.75 0 0 0 0-1.5Z" />
+                </svg>
+              </span>
+              <h3 class="text-lg font-semibold text-slate-900">{feature.title}</h3>
+            </header>
+            <p class="mt-3 text-sm text-slate-600">{feature.description}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section id="workflow" class="grid gap-12 lg:grid-cols-[1.15fr_1fr]">
+      <div class="space-y-6">
+        <p class="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-500">Étapes</p>
+        <h2 class="text-3xl font-semibold text-slate-900">Un flux simple de bout en bout</h2>
+        <p class="text-base text-slate-600">
+          Les pages d'authentification et l'API d'ingestion sont déjà en place. Il ne reste qu'à compléter les étapes du plan pour offrir une expérience complète d'import et de visualisation.
+        </p>
+        <div class="space-y-4">
+          {steps.map((step) => (
+            <div class="flex gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <span class="text-2xl font-semibold text-emerald-500">{step.label}</span>
+              <div class="space-y-1">
+                <h3 class="text-lg font-semibold text-slate-900">{step.title}</h3>
+                <p class="text-sm text-slate-600">{step.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div class="rounded-3xl border border-slate-200 bg-slate-900 p-6 text-sm text-slate-100 shadow-xl">
+        <div class="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-emerald-300/80">
+          <span>Code snippet</span>
+          <span>Normalisation CSV</span>
+        </div>
+        <pre class="mt-4 overflow-x-auto rounded-2xl bg-slate-950/70 p-4 font-mono text-xs leading-relaxed text-emerald-100">
+{codeSnippet}
+        </pre>
+        <p class="mt-6 text-sm text-slate-300">
+          Toute la logique critique est côté serveur : user_id injecté automatiquement, policies RLS appliquées avant chaque insertion.
+        </p>
+      </div>
+    </section>
+
+    <section id="faq" class="space-y-8">
+      <div class="space-y-3 text-center">
+        <p class="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-500">FAQ</p>
+        <h2 class="text-3xl font-semibold text-slate-900">Questions fréquentes</h2>
+        <p class="mx-auto max-w-2xl text-base text-slate-600">
+          Besoin d'aller plus loin ? Le fichier `plan.md` détaille chaque étape du MVP et les évolutions à venir.
+        </p>
+      </div>
+      <div class="grid gap-6 md:grid-cols-3">
+        {faqs.map((faq) => (
+          <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 class="text-base font-semibold text-slate-900">{faq.question}</h3>
+            <p class="mt-3 text-sm text-slate-600">{faq.answer}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  </main>
+
+  <section class="px-6 pb-24">
+    <div class="mx-auto max-w-5xl rounded-3xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-emerald-700 p-10 text-white shadow-xl">
+      <div class="space-y-4 text-center">
+        <p class="text-sm uppercase tracking-[0.3em] text-white/70">Passez à l'action</p>
+        <h2 class="text-3xl font-semibold">Construisez votre dashboard financier dès aujourd'hui</h2>
+        <p class="mx-auto max-w-2xl text-sm text-white/80">
+          Le squelette est prêt : complétez les composants d'import, ajoutez vos règles de catégorisation et déployez sur Netlify en quelques heures.
+        </p>
+        <div class="flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <a
+            href="/signup"
+            data-open-auth="signup"
+            class="inline-flex items-center justify-center rounded-lg bg-white px-5 py-3 text-sm font-semibold text-emerald-600 shadow-sm transition hover:bg-emerald-50"
+          >
+            Créer un compte
+          </a>
+          <a
+            href="#workflow"
+            class="inline-flex items-center justify-center rounded-lg px-5 py-3 text-sm font-semibold text-white/80 ring-1 ring-white/40 transition hover:text-white hover:ring-white/80"
+          >
+            Consulter le plan détaillé
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="border-t border-slate-200 bg-white/80 py-8">
+    <div class="mx-auto flex max-w-6xl flex-col items-center gap-2 px-6 text-center text-sm text-slate-500 sm:flex-row sm:justify-between">
+      <p>© {new Date().getFullYear()} Budget Manager. Construit avec Astro, Supabase et Tailwind.</p>
+      <div class="flex items-center gap-4">
+        <a href="/login" data-open-auth="login" class="transition hover:text-slate-900">Connexion</a>
+        <a href="/signup" data-open-auth="signup" class="transition hover:text-slate-900">Créer un compte</a>
+      </div>
+    </div>
+  </footer>
+
+  <div
+    id="modal-login"
+    class="auth-modal fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/70 px-4 py-10"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-login-title"
+  >
+    <div class="relative w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl ring-1 ring-slate-900/10">
+      <button
+        type="button"
+        class="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+        data-close-auth
+      >
+        <span class="sr-only">Fermer</span>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m7 7 10 10M17 7 7 17" />
+        </svg>
+      </button>
+
+      <div class="space-y-2 text-center">
+        <p id="modal-login-title" class="text-2xl font-semibold text-slate-900">Connexion</p>
+        <p class="text-sm text-slate-600">
+          Connectez-vous pour retrouver vos transactions et votre dashboard.
+        </p>
+      </div>
+
+      <form id="modal-login-form" class="mt-6 space-y-4" autocomplete="on">
+        <div class="space-y-1 text-left">
+          <label for="modal-login-email" class="text-sm font-medium text-slate-800">Adresse e-mail</label>
+          <input
+            id="modal-login-email"
+            name="email"
+            type="email"
+            required
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+            placeholder="ton.email@example.com"
+          />
+        </div>
+        <div class="space-y-1 text-left">
+          <label for="modal-login-password" class="text-sm font-medium text-slate-800">Mot de passe</label>
+          <input
+            id="modal-login-password"
+            name="password"
+            type="password"
+            minlength="6"
+            required
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+            placeholder="••••••"
+          />
+        </div>
+        <button
+          type="submit"
+          data-auth-submit="login"
+          class="inline-flex w-full items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+        >
+          Se connecter
+        </button>
+      </form>
+
+      <div data-auth-feedback="login" class="mt-4 min-h-[1.5rem] text-center text-sm text-slate-600"></div>
+
+      <p class="mt-6 text-center text-sm text-slate-600">
+        Pas encore de compte ?
+        <a href="/signup" data-open-auth="signup" class="font-semibold text-emerald-600 transition hover:text-emerald-500">
+          Créez-le ici
+        </a>
+      </p>
+    </div>
+  </div>
+
+  <div
+    id="modal-signup"
+    class="auth-modal fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/70 px-4 py-10"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-signup-title"
+  >
+    <div class="relative w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl ring-1 ring-slate-900/10">
+      <button
+        type="button"
+        class="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+        data-close-auth
+      >
+        <span class="sr-only">Fermer</span>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m7 7 10 10M17 7 7 17" />
+        </svg>
+      </button>
+
+      <div class="space-y-2 text-center">
+        <p id="modal-signup-title" class="text-2xl font-semibold text-slate-900">Créer un compte</p>
+        <p class="text-sm text-slate-600">
+          Rejoignez Budget Manager pour importer vos relevés et suivre vos finances.
+        </p>
+      </div>
+
+      <form id="modal-signup-form" class="mt-6 space-y-4" autocomplete="on">
+        <div class="space-y-1 text-left">
+          <label for="modal-signup-email" class="text-sm font-medium text-slate-800">Adresse e-mail</label>
+          <input
+            id="modal-signup-email"
+            name="email"
+            type="email"
+            required
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+            placeholder="nouvel.utilisateur@example.com"
+          />
+        </div>
+        <div class="space-y-1 text-left">
+          <label for="modal-signup-password" class="text-sm font-medium text-slate-800">Mot de passe</label>
+          <input
+            id="modal-signup-password"
+            name="password"
+            type="password"
+            minlength="6"
+            required
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+            placeholder="Minimum 6 caractères"
+          />
+        </div>
+        <button
+          type="submit"
+          data-auth-submit="signup"
+          class="inline-flex w-full items-center justify-center rounded-lg border border-emerald-500 bg-white px-4 py-2 text-sm font-semibold text-emerald-600 transition hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+        >
+          Créer mon compte
+        </button>
+      </form>
+
+      <div data-auth-feedback="signup" class="mt-4 min-h-[1.5rem] text-center text-sm text-slate-600"></div>
+
+      <p class="mt-6 text-center text-sm text-slate-600">
+        Vous avez déjà un compte ?
+        <a href="/login" data-open-auth="login" class="font-semibold text-emerald-600 transition hover:text-emerald-500">
+          Connectez-vous ici
+        </a>
+      </p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '/src/lib/supabaseClient'
+
+    const root = document.querySelector('[data-default-auth]')
+    const body = document.body
+
+    const modals = {
+      login: document.querySelector('#modal-login'),
+      signup: document.querySelector('#modal-signup'),
+    }
+
+    const forms = {
+      login: document.querySelector('#modal-login-form'),
+      signup: document.querySelector('#modal-signup-form'),
+    }
+
+    const feedback = {
+      login: document.querySelector('[data-auth-feedback="login"]'),
+      signup: document.querySelector('[data-auth-feedback="signup"]'),
+    }
+
+    const openers = document.querySelectorAll('[data-open-auth]')
+    openers.forEach((trigger) => {
+      trigger.addEventListener('click', (event) => {
+        const key = trigger.getAttribute('data-open-auth')
+        if (key !== 'login' && key !== 'signup') return
+        if (trigger.tagName === 'A') {
+          event.preventDefault()
+        }
+        openModal(key)
+      })
+    })
+
+    document.querySelectorAll('[data-close-auth]').forEach((btn) => {
+      btn.addEventListener('click', () => closeAll())
+    })
+
+    Object.values(modals).forEach((modal) => {
+      if (!modal) return
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+          closeAll()
+        }
+      })
+    })
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeAll()
+      }
+    })
+
+    const params = new URLSearchParams(window.location.search)
+    const paramAuth = params.get('auth')
+    const suppressDefault = paramAuth === 'none'
+    const defaultAuth = root?.dataset.defaultAuth || ''
+
+    if (paramAuth === 'login' || paramAuth === 'signup') {
+      openModal(paramAuth, { updateUrl: false })
+    } else if (!suppressDefault && (defaultAuth === 'login' || defaultAuth === 'signup')) {
+      openModal(defaultAuth)
+    }
+
+    function openModal(key, { updateUrl = true } = {}) {
+      const modal = modals[key]
+      if (!modal) return
+
+      Object.entries(modals).forEach(([otherKey, otherModal]) => {
+        if (otherKey !== key) {
+          otherModal?.classList.add('hidden')
+          otherModal?.classList.remove('flex')
+        }
+      })
+
+      modal.classList.remove('hidden')
+      modal.classList.add('flex')
+      body.classList.add('overflow-hidden')
+
+      window.setTimeout(() => {
+        const firstInput = modal.querySelector('input')
+        if (firstInput instanceof HTMLInputElement) {
+          firstInput.focus()
+        }
+      }, 60)
+
+      if (updateUrl) {
+        const url = new URL(window.location.href)
+        url.searchParams.set('auth', key)
+        window.history.replaceState({}, '', url)
+      }
+    }
+
+    function closeAll() {
+      let wasOpen = false
+      Object.values(modals).forEach((modal) => {
+        if (!modal) return
+        if (!modal.classList.contains('hidden')) {
+          wasOpen = true
+        }
+        modal.classList.add('hidden')
+        modal.classList.remove('flex')
+      })
+
+      if (wasOpen) {
+        body.classList.remove('overflow-hidden')
+        const url = new URL(window.location.href)
+        if (url.searchParams.has('auth')) {
+          url.searchParams.delete('auth')
+          window.history.replaceState({}, '', url)
+        }
+      }
+    }
+
+    function showMessage(key, message, type = 'info') {
+      const el = feedback[key]
+      if (!el) return
+      const base = 'min-h-[1.5rem] text-center text-sm'
+      const color =
+        type === 'error'
+          ? 'text-rose-600'
+          : type === 'success'
+          ? 'text-emerald-600'
+          : 'text-slate-600'
+      el.textContent = message
+      el.className = `${base} ${color}`
+    }
+
+    function setSubmitting(form, isSubmitting) {
+      const submit = form.querySelector('[data-auth-submit]')
+      if (submit instanceof HTMLButtonElement) {
+        submit.disabled = isSubmitting
+        submit.classList.toggle('opacity-70', isSubmitting)
+      }
+    }
+
+    async function persistSessionCookies(session) {
+      if (!session) {
+        throw new Error("Session Supabase absente après l'authentification")
+      }
+
+      const response = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+          expires_in: session.expires_in,
+        }),
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        const details = await response.text()
+        throw new Error(`Impossible de synchroniser la session (${response.status}): ${details}`)
+      }
+    }
+
+    function redirectAfterAuth(message = 'Redirection...') {
+      showMessage('login', message, 'success')
+      showMessage('signup', message, 'success')
+      closeAll()
+      window.location.href = '/app'
+    }
+
+    const loginForm = forms.login
+    if (loginForm) {
+      loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault()
+        const formData = new FormData(loginForm)
+        const email = String(formData.get('email') || '').trim()
+        const password = String(formData.get('password') || '')
+
+        if (!email || !password) {
+          showMessage('login', 'Email et mot de passe sont requis.', 'error')
+          return
+        }
+
+        try {
+          showMessage('login', 'Connexion en cours...')
+          setSubmitting(loginForm, true)
+          const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+          if (error) throw error
+          await persistSessionCookies(data.session)
+          redirectAfterAuth()
+        } catch (error) {
+          console.error(error)
+          const message = error instanceof Error ? error.message : 'Connexion impossible.'
+          showMessage('login', message, 'error')
+        } finally {
+          setSubmitting(loginForm, false)
+        }
+      })
+    }
+
+    const signupForm = forms.signup
+    if (signupForm) {
+      signupForm.addEventListener('submit', async (event) => {
+        event.preventDefault()
+        const formData = new FormData(signupForm)
+        const email = String(formData.get('email') || '').trim()
+        const password = String(formData.get('password') || '')
+
+        if (!email || !password) {
+          showMessage('signup', 'Email et mot de passe sont requis.', 'error')
+          return
+        }
+
+        try {
+          showMessage('signup', 'Création du compte...')
+          setSubmitting(signupForm, true)
+          const { data, error } = await supabase.auth.signUp({ email, password })
+          if (error) throw error
+
+          if (!data.session) {
+            showMessage('signup', 'Compte créé ! Vérifiez votre boîte mail pour confirmer.', 'success')
+            return
+          }
+
+          await persistSessionCookies(data.session)
+          redirectAfterAuth('Compte créé, redirection...')
+        } catch (error) {
+          console.error(error)
+          const message = error instanceof Error ? error.message : 'Impossible de créer le compte.'
+          showMessage('signup', message, 'error')
+        } finally {
+          setSubmitting(signupForm, false)
+        }
+      })
+    }
+  </script>
 </div>
-
-<style>
-	#background {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		z-index: -1;
-		filter: blur(100px);
-	}
-
-	#container {
-		font-family: Inter, Roboto, 'Helvetica Neue', 'Arial Nova', 'Nimbus Sans', Arial, sans-serif;
-		height: 100%;
-	}
-
-	main {
-		height: 100%;
-		display: flex;
-		justify-content: center;
-	}
-
-	#hero {
-		display: flex;
-		align-items: start;
-		flex-direction: column;
-		justify-content: center;
-		padding: 16px;
-	}
-
-	h1 {
-		font-size: 22px;
-		margin-top: 0.25em;
-	}
-
-	#links {
-		display: flex;
-		gap: 16px;
-	}
-
-	#links a {
-		display: flex;
-		align-items: center;
-		padding: 10px 12px;
-		color: #111827;
-		text-decoration: none;
-		transition: color 0.2s;
-	}
-
-	#links a:hover {
-		color: rgb(78, 80, 86);
-	}
-
-	#links a svg {
-		height: 1em;
-		margin-left: 8px;
-	}
-
-	#links a.button {
-		color: white;
-		background: linear-gradient(83.21deg, #3245ff 0%, #bc52ee 100%);
-		box-shadow:
-			inset 0 0 0 1px rgba(255, 255, 255, 0.12),
-			inset 0 -2px 0 rgba(0, 0, 0, 0.24);
-		border-radius: 10px;
-	}
-
-	#links a.button:hover {
-		color: rgb(230, 230, 230);
-		box-shadow: none;
-	}
-
-	pre {
-		font-family:
-			ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono',
-			monospace;
-		font-weight: normal;
-		background: linear-gradient(14deg, #d83333 0%, #f041ff 100%);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
-		margin: 0;
-	}
-
-	h2 {
-		margin: 0 0 1em;
-		font-weight: normal;
-		color: #111827;
-		font-size: 20px;
-	}
-
-	p {
-		color: #4b5563;
-		font-size: 16px;
-		line-height: 24px;
-		letter-spacing: -0.006em;
-		margin: 0;
-	}
-
-	code {
-		display: inline-block;
-		background:
-			linear-gradient(66.77deg, #f3cddd 0%, #f5cee7 100%) padding-box,
-			linear-gradient(155deg, #d83333 0%, #f041ff 18%, #f5cee7 45%) border-box;
-		border-radius: 8px;
-		border: 1px solid transparent;
-		padding: 6px 8px;
-	}
-
-	.box {
-		padding: 16px;
-		background: rgba(255, 255, 255, 1);
-		border-radius: 16px;
-		border: 1px solid white;
-	}
-
-	#news {
-		position: absolute;
-		bottom: 16px;
-		right: 16px;
-		max-width: 300px;
-		text-decoration: none;
-		transition: background 0.2s;
-		backdrop-filter: blur(50px);
-	}
-
-	#news:hover {
-		background: rgba(255, 255, 255, 0.55);
-	}
-
-	@media screen and (max-height: 368px) {
-		#news {
-			display: none;
-		}
-	}
-
-	@media screen and (max-width: 768px) {
-		#container {
-			display: flex;
-			flex-direction: column;
-		}
-
-		#hero {
-			display: block;
-			padding-top: 10%;
-		}
-
-		#links {
-			flex-wrap: wrap;
-		}
-
-		#links a.button {
-			padding: 14px 18px;
-		}
-
-		#news {
-			right: 16px;
-			left: 16px;
-			bottom: 2.5rem;
-			max-width: 100%;
-		}
-
-		h1 {
-			line-height: 1.5;
-		}
-	}
-</style>
