@@ -1,0 +1,143 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout>
+  <section class="min-h-screen flex items-center justify-center bg-slate-50 py-16">
+    <div class="w-full max-w-md space-y-6 rounded-2xl bg-white p-8 shadow-xl ring-1 ring-slate-900/5">
+      <header class="space-y-2 text-center">
+        <h1 class="text-2xl font-semibold text-slate-900">Connexion</h1>
+        <p class="text-sm text-slate-600">
+          Identifie-toi pour accéder à ton tableau de bord ou crée un compte en quelques secondes.
+        </p>
+      </header>
+
+      <form class="space-y-4" autocomplete="on">
+        <div class="space-y-1">
+          <label for="email" class="text-sm font-medium text-slate-800">Adresse e-mail</label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            required
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+            placeholder="ton.email@example.com"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label for="password" class="text-sm font-medium text-slate-800">Mot de passe</label>
+          <input
+            id="password"
+            type="password"
+            name="password"
+            minlength="6"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-base text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+            placeholder="Minimum 6 caractères"
+          />
+        </div>
+
+        <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            data-action="signin"
+            class="inline-flex items-center justify-center rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+          >
+            Se connecter
+          </button>
+          <button
+            type="button"
+            data-action="signup"
+            class="inline-flex items-center justify-center rounded-lg border border-emerald-500 px-4 py-2 text-sm font-semibold text-emerald-600 transition hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+          >
+            Créer un compte
+          </button>
+          <button
+            type="button"
+            data-action="magic"
+            class="col-span-1 sm:col-span-2 inline-flex items-center justify-center rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-500"
+          >
+            Recevoir un lien magique
+          </button>
+        </div>
+      </form>
+
+      <div id="feedback" role="status" class="min-h-[1.5rem] text-center text-sm"></div>
+    </div>
+  </section>
+</Layout>
+
+<script type="module">
+  import { supabase } from '../lib/supabaseClient'
+
+  const emailInput = document.querySelector('#email')
+  const passwordInput = document.querySelector('#password')
+  const feedback = document.querySelector('#feedback')
+
+  const showMessage = (message, type = 'info') => {
+    feedback.textContent = message
+    feedback.className = `min-h-[1.5rem] text-center text-sm ${
+      type === 'error'
+        ? 'text-rose-600'
+        : type === 'success'
+        ? 'text-emerald-600'
+        : 'text-slate-600'
+    }`
+  }
+
+  const handleAction = async (action) => {
+    const email = emailInput.value.trim()
+    const password = passwordInput.value
+
+    if (!email) {
+      showMessage('Merci de renseigner ton adresse e-mail.', 'error')
+      return
+    }
+
+    try {
+      showMessage('En cours…')
+
+      if (action === 'signin') {
+        if (!password) {
+          showMessage('Le mot de passe est requis pour la connexion.', 'error')
+          return
+        }
+        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) throw error
+        showMessage('Connexion réussie, redirection…', 'success')
+        window.location.href = '/app'
+        return
+      }
+
+      if (action === 'signup') {
+        if (!password) {
+          showMessage('Choisis un mot de passe pour créer ton compte.', 'error')
+          return
+        }
+        const { error } = await supabase.auth.signUp({ email, password })
+        if (error) throw error
+        showMessage('Compte créé ! Vérifie ta boîte mail pour confirmer.', 'success')
+        return
+      }
+
+      if (action === 'magic') {
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: new URL('/app', window.location.origin).toString(),
+          },
+        })
+        if (error) throw error
+        showMessage('Lien magique envoyé. Vérifie ta boîte mail !', 'success')
+        return
+      }
+    } catch (error) {
+      console.error(error)
+      showMessage(error.message ?? 'Une erreur est survenue.', 'error')
+    }
+  }
+
+  document.querySelectorAll('[data-action]').forEach((button) => {
+    button.addEventListener('click', () => handleAction(button.dataset.action))
+  })
+</script>

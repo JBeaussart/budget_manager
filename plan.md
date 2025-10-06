@@ -137,9 +137,9 @@ export const supabase = createClient(
 
 ## 7) Pages d’authentification
 **Créer** `src/pages/login.astro`
-- [ ] Formulaire email + mot de passe.
-- [ ] Boutons : « Se connecter », « Créer un compte », « Magic link ».
-- [ ] Appeler :
+- [x] Formulaire email + mot de passe.
+- [x] Boutons : « Se connecter », « Créer un compte », « Magic link ».
+- [x] Appeler :
 ```ts
 // sign in
 await supabase.auth.signInWithPassword({ email, password })
@@ -148,16 +148,7 @@ await supabase.auth.signUp({ email, password })
 // magic link
 await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: new URL('/app', window.location.origin).toString() }})
 ```
-**Créer** `src/pages/logout.ts` (endpoint simple)
-```ts
-import type { APIRoute } from 'astro'
-import { supabase } from '../lib/supabaseClient'
-
-export const get: APIRoute = async () => {
-  await supabase.auth.signOut()
-  return new Response(null, { status: 302, headers: { Location: '/login' } })
-}
-```
+- [x] Ajouter une page/route de déconnexion (`src/pages/logout.astro`) qui appelle `supabase.auth.signOut()` côté client puis redirige vers `/login`.
 **Critères d’acceptation**
 - On peut créer un compte, se connecter, se déconnecter.
 

@@ -1,0 +1,24 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout>
+  <section class="min-h-screen flex items-center justify-center bg-slate-50">
+    <div class="space-y-4 text-center">
+      <h1 class="text-lg font-semibold text-slate-900">Déconnexion…</h1>
+      <p class="text-sm text-slate-600">Merci de patienter pendant que nous sécurisons ta session.</p>
+    </div>
+  </section>
+</Layout>
+
+<script type="module">
+  import { supabase } from '../lib/supabaseClient'
+
+  try {
+    await supabase.auth.signOut({ scope: 'local' })
+  } catch (error) {
+    console.error('Erreur de déconnexion', error)
+  } finally {
+    window.location.href = '/login'
+  }
+</script>
