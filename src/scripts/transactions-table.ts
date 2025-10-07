@@ -10,17 +10,20 @@ type Tx = {
   category?: string
 }
 
-const monthInput = document.getElementById('tx-filter-month') as HTMLInputElement | null
+const startInput = document.getElementById('tx-filter-start') as HTMLInputElement | null
+const endInput = document.getElementById('tx-filter-end') as HTMLInputElement | null
 const catSelect = document.getElementById('tx-filter-category') as HTMLSelectElement | null
 const searchInput = document.getElementById('tx-filter-search') as HTMLInputElement | null
 const applyBtn = document.getElementById('tx-apply') as HTMLButtonElement | null
 const resetBtn = document.getElementById('tx-reset') as HTMLButtonElement | null
-const moreBtn = document.getElementById('tx-more') as HTMLButtonElement | null
+const pagination = document.getElementById('tx-pagination') as HTMLElement | null
 const deleteAllBtn = document.getElementById('tx-delete-all') as HTMLButtonElement | null
 const tbody = document.getElementById('tx-body') as HTMLElement | null
 const stats = document.getElementById('tx-stats') as HTMLElement | null
 const feedback = document.getElementById('tx-feedback') as HTMLElement | null
-const applyRulesToggle = document.getElementById('tx-apply-rules') as HTMLInputElement | null
+// Rules are always applied on this page (no toggle UI)
+const applyRulesToggle = null as unknown as HTMLInputElement | null
+const listTop = document.getElementById('tx-list-top') as HTMLElement | null
 
 const PAGE_SIZE = 40
 let page = 0
@@ -38,6 +41,14 @@ function setStats(loaded: number) {
   stats.textContent = total > 0 ? `${loaded} / ${total} lignes` : loaded > 0 ? `${loaded} lignes` : 'Aucune donnée.'
 }
 
+function scrollToListTop() {
+  if (listTop) {
+    listTop.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
 function formatAmount(n: number) {
   const sign = n < 0 ? '-' : ''
   const abs = Math.abs(n)
@@ -51,39 +62,30 @@ function formatDate(d: string) {
   return `${m[3]}/${m[2]}/${m[1]}`
 }
 
-function monthStartEnd(month: string | null) {
-  if (!month) return [null, null] as const
-  const [yStr, mStr] = month.split('-')
-  const y = Number(yStr)
-  const m = Number(mStr)
-  if (!y || !m) return [null, null] as const
-  const start = `${yStr}-${mStr.padStart(2, '0')}-01`
-  const lastDay = new Date(y, m, 0).getDate()
-  const end = `${yStr}-${mStr.padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+function rangeStartEnd() {
+  const start = (startInput?.value || '').trim() || null
+  const end = (endInput?.value || '').trim() || null
   return [start, end] as const
 }
 
 async function fetchPage(opts: { append?: boolean } = {}) {
-  if (!tbody || !moreBtn) return
-  const month = monthInput?.value || null
+  if (!tbody) return
+  const [start, end] = rangeStartEnd()
   const category = (catSelect?.value || '').trim()
   const search = (searchInput?.value || '').trim()
 
-  const [start, end] = monthStartEnd(month)
   const from = page * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
   setFeedback('Chargement...')
-  moreBtn.disabled = true
 
   let query = supabase
     .from('transactions')
     .select('*', { count: 'exact' })
     .order('occurred_at', { ascending: false })
 
-  if (start && end) {
-    query = query.gte('occurred_at', start).lte('occurred_at', end)
-  }
+  if (start) query = query.gte('occurred_at', start)
+  if (end) query = query.lte('occurred_at', end)
   if (category) {
     query = query.eq('category', category)
   }
@@ -97,11 +99,17 @@ async function fetchPage(opts: { append?: boolean } = {}) {
   if (error) {
     console.error(error)
     setFeedback(error.message || 'Erreur de chargement', 'error')
-    moreBtn.disabled = false
     return
   }
 
   total = count ?? 0
+  // If current page is out of bounds (after deletion), clamp and refetch once
+  const pageCount = Math.max(0, Math.ceil((total || 0) / PAGE_SIZE))
+  if ((data?.length || 0) === 0 && total > 0 && page > 0 && page >= pageCount) {
+    page = Math.max(0, pageCount - 1)
+    await fetchPage({ append: false })
+    return
+  }
   if (!opts.append) {
     tbody.innerHTML = ''
   }
@@ -110,7 +118,7 @@ async function fetchPage(opts: { append?: boolean } = {}) {
   const loadedAfter = loadedBefore + (data?.length || 0)
 
   // Load local rules if toggle is enabled
-  const rules = applyRulesToggle?.checked ? loadLocalRules() : []
+  const rules = loadLocalRules()
 
   // Known categories from filter select, current page, and local rules
   const categoriesSet = new Set<string>()
@@ -254,7 +262,7 @@ async function fetchPage(opts: { append?: boolean } = {}) {
 
   setFeedback('')
   setStats(loadedAfter)
-  moreBtn.disabled = loadedAfter >= (total || 0)
+  renderPagination()
 }
 
 function applyFilters(resetPage = true) {
@@ -264,30 +272,102 @@ function applyFilters(resetPage = true) {
 
 applyBtn?.addEventListener('click', () => applyFilters(true))
 resetBtn?.addEventListener('click', () => {
-  if (monthInput) {
-    monthInput.value = ''
-  }
+  if (startInput) startInput.value = ''
+  if (endInput) endInput.value = ''
   if (catSelect) catSelect.value = ''
   if (searchInput) searchInput.value = ''
   applyFilters(true)
 })
 
-moreBtn?.addEventListener('click', () => {
-  page += 1
-  fetchPage({ append: true })
-})
+// Pagination UI
+function renderPagination() {
+  if (!pagination) return
+  pagination.innerHTML = ''
+  const pageCount = Math.max(0, Math.ceil((total || 0) / PAGE_SIZE))
+  if (pageCount <= 1) return
 
-applyRulesToggle?.addEventListener('change', () => {
-  // Re-render current page to reflect rule overlay
-  fetchPage({ append: false })
-})
+  const mkBtn = (label: string, opts: { disabled?: boolean; active?: boolean; onClick?: () => void } = {}) => {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    const base = 'rounded-lg border px-3 py-2 text-sm font-medium transition disabled:opacity-50'
+    const normal = 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+    const active = 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
+    btn.className = `${base} ${opts.active ? active : normal}`
+    btn.textContent = label
+    if (opts.disabled) btn.disabled = true
+    if (opts.onClick) btn.addEventListener('click', opts.onClick)
+    return btn
+  }
+
+  const addEllipsis = () => {
+    const span = document.createElement('span')
+    span.className = 'px-1 text-slate-400'
+    span.textContent = '…'
+    pagination.appendChild(span)
+  }
+
+  // Prev
+  pagination.appendChild(
+    mkBtn('Précédent', {
+      disabled: page <= 0,
+      onClick: () => {
+        if (page <= 0) return
+        page -= 1
+        scrollToListTop()
+        fetchPage({ append: false })
+      },
+    }),
+  )
+
+  // Numeric buttons with windowing
+  const window = 2
+  const lastIndex = pageCount - 1
+  const start = Math.max(0, page - window)
+  const end = Math.min(lastIndex, page + window)
+  // Always include first and last
+  const include = new Set<number>([0, lastIndex])
+  for (let i = start; i <= end; i++) include.add(i)
+  const sorted = Array.from(include.values()).sort((a, b) => a - b)
+
+  for (let i = 0; i < sorted.length; i++) {
+    const p = sorted[i]
+    const prev = i > 0 ? sorted[i - 1] : null
+    if (prev !== null && p - (prev as number) > 1) addEllipsis()
+    pagination.appendChild(
+      mkBtn(String(p + 1), {
+        active: p === page,
+        onClick: () => {
+          if (p === page) return
+          page = p
+          scrollToListTop()
+          fetchPage({ append: false })
+        },
+      }),
+    )
+  }
+
+  // Next
+  pagination.appendChild(
+    mkBtn('Suivant', {
+      disabled: page >= pageCount - 1,
+      onClick: () => {
+        if (page >= pageCount - 1) return
+        page += 1
+        scrollToListTop()
+        fetchPage({ append: false })
+      },
+    }),
+  )
+}
+
+// No toggle: rules are always applied
 
 // Initial load: show latest 40 across all months (no month filter)
 applyFilters(true)
 
 // Re-render if rules change in another tab/page
 window.addEventListener('storage', (e) => {
-  if (e.key === 'bm_rules_v1' && applyRulesToggle?.checked) {
+  if (e.key === 'bm_rules_v1') {
     fetchPage({ append: false })
   }
 })
