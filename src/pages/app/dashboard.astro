@@ -37,15 +37,17 @@ export const prerender = false
 
       <div class="grid gap-4 sm:grid-cols-3">
         <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Revenus (mois)</p>
+          <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Revenus</p>
           <p id="card-income" class="mt-2 text-2xl font-semibold text-emerald-600">—</p>
+          <p id="card-income-avg" class="mt-1 text-xs text-slate-500"></p>
         </div>
         <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Dépenses (mois)</p>
+          <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Dépenses</p>
           <p id="card-expenses" class="mt-2 text-2xl font-semibold text-rose-600">—</p>
+          <p id="card-expenses-avg" class="mt-1 text-xs text-slate-500"></p>
         </div>
         <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Épargne (mois)</p>
+          <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Épargne</p>
           <p id="card-saving" class="mt-2 text-2xl font-semibold text-slate-900">—</p>
         </div>
       </div>
@@ -53,14 +55,14 @@ export const prerender = false
       <div class="mt-8 grid gap-6 lg:grid-cols-2">
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div class="mb-4 flex items-center justify-between">
-            <p class="text-sm font-semibold text-slate-800">Dépenses par catégorie (mois)</p>
+            <p class="text-sm font-semibold text-slate-800">Dépenses par catégorie</p>
             <span id="pie-month-label" class="text-xs text-slate-500"></span>
           </div>
           <canvas id="chart-categories" height="240"></canvas>
         </div>
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div class="mb-4 flex items-center justify-between">
-            <p class="text-sm font-semibold text-slate-800">Revenus vs Dépenses (année)</p>
+            <p class="text-sm font-semibold text-slate-800">Revenus vs Dépenses</p>
             <span id="bar-range-label" class="text-xs text-slate-500"></span>
           </div>
           <canvas id="chart-months" height="240"></canvas>

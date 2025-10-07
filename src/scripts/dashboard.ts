@@ -12,6 +12,8 @@ type Tx = {
 const cardIncome = document.getElementById('card-income') as HTMLElement | null
 const cardExpenses = document.getElementById('card-expenses') as HTMLElement | null
 const cardSaving = document.getElementById('card-saving') as HTMLElement | null
+const cardIncomeAvg = document.getElementById('card-income-avg') as HTMLElement | null
+const cardExpensesAvg = document.getElementById('card-expenses-avg') as HTMLElement | null
 const pieMonthLabel = document.getElementById('pie-month-label') as HTMLElement | null
 const barRangeLabel = document.getElementById('bar-range-label') as HTMLElement | null
 const feedback = document.getElementById('dash-feedback') as HTMLElement | null
@@ -87,6 +89,13 @@ function updateCardsAndPie() {
   if (cardIncome) cardIncome.textContent = fmt(inc)
   if (cardExpenses) cardExpenses.textContent = fmt(exp)
   if (cardSaving) cardSaving.textContent = fmt(sav)
+  if (state.allMonths) {
+    if (cardIncomeAvg) cardIncomeAvg.textContent = `Moyenne mensuelle: ${fmt(inc / 12)}`
+    if (cardExpensesAvg) cardExpensesAvg.textContent = `Moyenne mensuelle: ${fmt(exp / 12)}`
+  } else {
+    if (cardIncomeAvg) cardIncomeAvg.textContent = ''
+    if (cardExpensesAvg) cardExpensesAvg.textContent = ''
+  }
   if (pieMonthLabel) pieMonthLabel.textContent = state.allMonths ? `Année ${state.year}` : `${monthsFull[state.month - 1]} ${state.year}`
 
   const top = topCategories(rowsWithRules as any, 8)
