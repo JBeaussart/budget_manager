@@ -1,0 +1,183 @@
+import { supabase } from '/src/lib/supabaseClient'
+
+type Tx = {
+  id: string
+  occurred_at: string
+  amount: number
+  currency?: string
+  description?: string
+  counterparty?: string
+  category?: string
+}
+
+const monthInput = document.getElementById('tx-filter-month') as HTMLInputElement | null
+const catSelect = document.getElementById('tx-filter-category') as HTMLSelectElement | null
+const searchInput = document.getElementById('tx-filter-search') as HTMLInputElement | null
+const applyBtn = document.getElementById('tx-apply') as HTMLButtonElement | null
+const resetBtn = document.getElementById('tx-reset') as HTMLButtonElement | null
+const moreBtn = document.getElementById('tx-more') as HTMLButtonElement | null
+const tbody = document.getElementById('tx-body') as HTMLElement | null
+const stats = document.getElementById('tx-stats') as HTMLElement | null
+const feedback = document.getElementById('tx-feedback') as HTMLElement | null
+
+const PAGE_SIZE = 50
+let page = 0
+let total = 0
+
+function setFeedback(msg: string, type: 'info' | 'success' | 'error' = 'info') {
+  if (!feedback) return
+  const color = type === 'error' ? 'text-rose-600' : type === 'success' ? 'text-emerald-600' : 'text-slate-600'
+  feedback.textContent = msg
+  feedback.className = `mt-4 min-h-[1.25rem] text-sm ${color}`
+}
+
+function setStats(loaded: number) {
+  if (!stats) return
+  stats.textContent = total > 0 ? `${loaded} / ${total} lignes` : loaded > 0 ? `${loaded} lignes` : 'Aucune donnée.'
+}
+
+function formatAmount(n: number) {
+  const sign = n < 0 ? '-' : ''
+  const abs = Math.abs(n)
+  return `${sign}${abs.toFixed(2)} €`
+}
+
+function formatDate(d: string) {
+  // Expect YYYY-MM-DD, display DD/MM/YYYY
+  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return d
+  return `${m[3]}/${m[2]}/${m[1]}`
+}
+
+function monthStartEnd(month: string | null) {
+  if (!month) return [null, null] as const
+  const [yStr, mStr] = month.split('-')
+  const y = Number(yStr)
+  const m = Number(mStr)
+  if (!y || !m) return [null, null] as const
+  const start = `${yStr}-${mStr.padStart(2, '0')}-01`
+  const lastDay = new Date(y, m, 0).getDate()
+  const end = `${yStr}-${mStr.padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+  return [start, end] as const
+}
+
+async function fetchPage(opts: { append?: boolean } = {}) {
+  if (!tbody || !moreBtn) return
+  const month = monthInput?.value || null
+  const category = (catSelect?.value || '').trim()
+  const search = (searchInput?.value || '').trim()
+
+  const [start, end] = monthStartEnd(month)
+  const from = page * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+
+  setFeedback('Chargement...')
+  moreBtn.disabled = true
+
+  let query = supabase
+    .from('transactions')
+    .select('*', { count: 'exact' })
+    .order('occurred_at', { ascending: false })
+
+  if (start && end) {
+    query = query.gte('occurred_at', start).lte('occurred_at', end)
+  }
+  if (category) {
+    query = query.eq('category', category)
+  }
+  if (search) {
+    const esc = search.replace(/%/g, '\\%').replace(/_/g, '\\_')
+    query = query.or(`description.ilike.%${esc}%,counterparty.ilike.%${esc}%`)
+  }
+
+  const { data, error, count } = await query.range(from, to)
+
+  if (error) {
+    console.error(error)
+    setFeedback(error.message || 'Erreur de chargement', 'error')
+    moreBtn.disabled = false
+    return
+  }
+
+  total = count ?? 0
+  if (!opts.append) {
+    tbody.innerHTML = ''
+  }
+
+  const loadedBefore = tbody.querySelectorAll('tr').length
+  const loadedAfter = loadedBefore + (data?.length || 0)
+
+  for (const row of (data || []) as Tx[]) {
+    const tr = document.createElement('tr')
+    const amountClass = row.amount < 0 ? 'text-rose-600' : 'text-emerald-600'
+    tr.innerHTML = `
+      <td class="px-3 py-2 text-slate-700">${formatDate(row.occurred_at)}</td>
+      <td class="px-3 py-2 text-slate-700">${row.description ?? ''}</td>
+      <td class="px-3 py-2 text-slate-700">${row.counterparty ?? ''}</td>
+      <td class="px-3 py-2 text-slate-700">${row.category ?? ''}</td>
+      <td class="px-3 py-2 text-right font-medium ${amountClass}">${formatAmount(row.amount)}</td>
+    `
+    tbody.appendChild(tr)
+  }
+
+  // Populate categories from the current loaded set if select has only default
+  if (catSelect && catSelect.options.length <= 1) {
+    const cats = new Set<string>()
+    const { data: allCats } = await supabase
+      .from('transactions')
+      .select('category')
+      .not('category', 'is', null)
+      .neq('category', '')
+      .limit(1000)
+    for (const r of (allCats || []) as { category: string }[]) {
+      cats.add(r.category)
+    }
+    const sorted = Array.from(cats).sort((a, b) => a.localeCompare(b))
+    for (const c of sorted) {
+      const o = document.createElement('option')
+      o.value = c
+      o.textContent = c
+      catSelect.appendChild(o)
+    }
+  }
+
+  setFeedback('')
+  setStats(loadedAfter)
+  moreBtn.disabled = loadedAfter >= (total || 0)
+}
+
+function applyFilters(resetPage = true) {
+  if (resetPage) page = 0
+  fetchPage({ append: false })
+}
+
+applyBtn?.addEventListener('click', () => applyFilters(true))
+resetBtn?.addEventListener('click', () => {
+  if (monthInput) {
+    const now = new Date()
+    const y = now.getFullYear()
+    const m = String(now.getMonth() + 1).padStart(2, '0')
+    monthInput.value = `${y}-${m}`
+  }
+  if (catSelect) catSelect.value = ''
+  if (searchInput) searchInput.value = ''
+  applyFilters(true)
+})
+
+moreBtn?.addEventListener('click', () => {
+  page += 1
+  fetchPage({ append: true })
+})
+
+// Initial month default and first load
+if (monthInput) {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  monthInput.value = `${y}-${m}`
+}
+
+applyFilters(true)
+
+export {}
+

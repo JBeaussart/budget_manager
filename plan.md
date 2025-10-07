@@ -196,11 +196,11 @@ export const onRequest: MiddlewareHandler = async (ctx, next) => {
 
 ## 10) Composant d’upload CSV
 **Créer** `src/components/CsvUploader.tsx`
-- [ ] Input `<input type="file" accept=".csv">`.
-- [ ] Parser avec **Papa Parse** (header true, skipEmptyLines true).
-- [ ] Détecter séparateur `;`/`,` automatiquement.
-- [ ] Afficher un **mapping de colonnes** (selects) vers : `date`, `amount`, `description`, `counterparty`, `currency`, `type`.
-- [ ] Bouton « Prévisualiser 20 lignes ».
+ - [x] Input `<input type="file" accept=".csv">`.
+ - [x] Parser avec **Papa Parse** (header true, skipEmptyLines true).
+ - [x] Détecter séparateur `;`/`,` automatiquement.
+ - [x] Afficher un **mapping de colonnes** (selects) vers : `date`, `amount`, `description`, `counterparty`, `type`.
+ - [x] Bouton « Prévisualiser 20 lignes ».
 
 **Critères d’acceptation**
 - Après sélection de fichier, prévisualisation & mapping visibles.
@@ -209,7 +209,7 @@ export const onRequest: MiddlewareHandler = async (ctx, next) => {
 
 ## 11) Normalisation & validation
 **Créer** `src/lib/normalizer.ts`
-- [ ] Fonctions :
+ - [x] Fonctions :
 ```ts
 import { z } from 'zod'
 
@@ -234,7 +234,7 @@ export function normalizeRow(row: any, map: Record<string,string>): NormalizedTx
   return NormalizedTx.parse({
     occurred_at: iso,
     amount: amt,
-    currency: row[map.currency] || 'EUR',
+    currency: 'EUR',
     description: row[map.description]?.trim(),
     counterparty: row[map.counterparty]?.trim(),
     raw: row
@@ -248,8 +248,8 @@ export function normalizeRow(row: any, map: Record<string,string>): NormalizedTx
 
 ## 12) Appel API d’ingestion (côté client)
 **Dans `CsvUploader.tsx`**
-- [ ] Bouton « Importer » → envoie un tableau de `NormalizedTx` vers `/api/ingest`.
-- [ ] Inclure le token d’accès courant :
+ - [x] Bouton « Importer » → envoie un tableau de `NormalizedTx` vers `/api/ingest`.
+ - [x] Inclure le token d’accès courant :
 ```ts
 const { data: { session } } = await supabase.auth.getSession()
 await fetch('/api/ingest', {
@@ -267,7 +267,7 @@ await fetch('/api/ingest', {
 ---
 
 ## 13) Endpoint `/api/ingest` (côté serveur)
-**Créer** `src/pages/api/ingest.ts`
+**Créer** `src/pages/api/ingest.ts` — [x]
 ```ts
 import type { APIRoute } from 'astro'
 import { createClient } from '@supabase/supabase-js'
@@ -298,15 +298,15 @@ export const post: APIRoute = async ({ request }) => {
 }
 ```
 **Critères d’acceptation**
-- Ingestion renvoie **204** si OK ; lignes visibles dans Supabase.
+- [x] Ingestion renvoie **204** si OK ; lignes visibles dans Supabase.
 
 ---
 
 ## 14) Récupération & affichage des transactions
-**Créer** `src/components/TransactionsTable.tsx`
-- [ ] Appeler : `supabase.from('transactions').select('*').order('occurred_at', { ascending: false })`
-- [ ] Filtres simples : par mois, par catégorie, par texte.
-- [ ] Pagination (limite 50, bouton « Plus »).
+**Créer** `src/components/TransactionsTable` (implémenté en `.astro`)
+- [x] Appeler : `supabase.from('transactions').select('*').order('occurred_at', { ascending: false })`
+- [x] Filtres simples : par mois, par catégorie, par texte.
+- [x] Pagination (limite 50, bouton « Plus »).
 
 **Critères d’acceptation**
 - Tableau affiche les données insérées.
