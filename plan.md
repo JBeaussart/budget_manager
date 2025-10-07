@@ -315,7 +315,7 @@ export const post: APIRoute = async ({ request }) => {
 
 ## 15) Calculs budget mensuel
 **Créer** `src/lib/metrics.ts`
-- [ ] Fonctions :
+- [x] Fonctions :
   - `sumIncome(rows)` → somme `amount > 0`
   - `sumExpenses(rows)` → somme absolue `amount < 0`
   - `saving(rows)` → revenus − dépenses
@@ -329,10 +329,10 @@ export const post: APIRoute = async ({ request }) => {
 
 ## 16) Dashboard
 **Créer** `src/pages/app/dashboard.astro`
-- [ ] Récupérer transactions (client ou via endpoint `/api/transactions` pour SSR).
-- [ ] Afficher :
+- [x] Récupérer transactions (client ou via endpoint `/api/transactions` pour SSR).
+- [x] Afficher :
   - Carte **Revenus / Dépenses / Épargne** du mois courant.
-  - **Camembert** dépenses par catégorie (Chart.js via `react-chartjs-2`).
+  - **Camembert** dépenses par catégorie (Chart.js).
   - **Histogramme** par mois (12 derniers mois).
 
 **Critères d’acceptation**
@@ -342,8 +342,8 @@ export const post: APIRoute = async ({ request }) => {
 
 ## 17) Éditeur de règles (version simple)
 **Créer** `src/pages/app/rules.astro`
-- [ ] Stockage local (localStorage) d’une liste de règles `{pattern, field, category, enabled}`.
-- [ ] Bouton « Re‑catégoriser » : applique les règles en local et propose de ré‑importer (amélioration ultérieure : table `rules` en DB).
+- [x] Stockage local (localStorage) d’une liste de règles `{pattern, field, category, enabled}`.
+- [x] Bouton « Re‑catégoriser » : applique les règles en local et propose de ré‑importer (prévisualisation + export CSV des changements).
 
 **Critères d’acceptation**
 - On peut créer/modifier/supprimer des règles locales et re‑catégoriser.

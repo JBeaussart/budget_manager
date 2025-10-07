@@ -23,6 +23,12 @@
         <label for="tx-filter-search" class="text-xs font-medium text-slate-600">Recherche</label>
         <input id="tx-filter-search" type="text" placeholder="description ou contrepartie" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" />
       </div>
+      <div class="flex items-center gap-3">
+        <label class="inline-flex items-center gap-2 text-xs text-slate-600">
+          <input id="tx-apply-rules" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-emerald-600" checked />
+          Appliquer les règles locales
+        </label>
+      </div>
       <div class="flex gap-2">
         <button id="tx-apply" class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600">Filtrer</button>
         <button id="tx-reset" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">Réinitialiser</button>
@@ -54,4 +60,3 @@
 </section>
 
 <script type="module" src="/src/scripts/transactions-table.ts"></script>
-

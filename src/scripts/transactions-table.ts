@@ -19,8 +19,9 @@ const moreBtn = document.getElementById('tx-more') as HTMLButtonElement | null
 const tbody = document.getElementById('tx-body') as HTMLElement | null
 const stats = document.getElementById('tx-stats') as HTMLElement | null
 const feedback = document.getElementById('tx-feedback') as HTMLElement | null
+const applyRulesToggle = document.getElementById('tx-apply-rules') as HTMLInputElement | null
 
-const PAGE_SIZE = 50
+const PAGE_SIZE = 40
 let page = 0
 let total = 0
 
@@ -107,14 +108,18 @@ async function fetchPage(opts: { append?: boolean } = {}) {
   const loadedBefore = tbody.querySelectorAll('tr').length
   const loadedAfter = loadedBefore + (data?.length || 0)
 
+  // Load local rules if toggle is enabled
+  const rules = applyRulesToggle?.checked ? loadLocalRules() : []
+
   for (const row of (data || []) as Tx[]) {
     const tr = document.createElement('tr')
     const amountClass = row.amount < 0 ? 'text-rose-600' : 'text-emerald-600'
+    const displayCategory = rules.length ? applyRuleCategory(row, rules) || row.category || '' : row.category || ''
     tr.innerHTML = `
       <td class="px-3 py-2 text-slate-700">${formatDate(row.occurred_at)}</td>
       <td class="px-3 py-2 text-slate-700">${row.description ?? ''}</td>
       <td class="px-3 py-2 text-slate-700">${row.counterparty ?? ''}</td>
-      <td class="px-3 py-2 text-slate-700">${row.category ?? ''}</td>
+      <td class="px-3 py-2 text-slate-700">${displayCategory}</td>
       <td class="px-3 py-2 text-right font-medium ${amountClass}">${formatAmount(row.amount)}</td>
     `
     tbody.appendChild(tr)
@@ -154,10 +159,7 @@ function applyFilters(resetPage = true) {
 applyBtn?.addEventListener('click', () => applyFilters(true))
 resetBtn?.addEventListener('click', () => {
   if (monthInput) {
-    const now = new Date()
-    const y = now.getFullYear()
-    const m = String(now.getMonth() + 1).padStart(2, '0')
-    monthInput.value = `${y}-${m}`
+    monthInput.value = ''
   }
   if (catSelect) catSelect.value = ''
   if (searchInput) searchInput.value = ''
@@ -169,15 +171,47 @@ moreBtn?.addEventListener('click', () => {
   fetchPage({ append: true })
 })
 
-// Initial month default and first load
-if (monthInput) {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  monthInput.value = `${y}-${m}`
-}
+applyRulesToggle?.addEventListener('change', () => {
+  // Re-render current page to reflect rule overlay
+  fetchPage({ append: false })
+})
 
+// Initial load: show latest 40 across all months (no month filter)
 applyFilters(true)
+
+// Re-render if rules change in another tab/page
+window.addEventListener('storage', (e) => {
+  if (e.key === 'bm_rules_v1' && applyRulesToggle?.checked) {
+    fetchPage({ append: false })
+  }
+})
 
 export {}
 
+// ----- Local rules helpers -----
+type LocalRule = { pattern: string; field?: 'description' | 'counterparty'; category: string; enabled: boolean }
+
+function loadLocalRules(): LocalRule[] {
+  try {
+    const raw = localStorage.getItem('bm_rules_v1')
+    const arr = raw ? JSON.parse(raw) : []
+    if (!Array.isArray(arr)) return []
+    return (arr as any[]).filter((r) => r && r.enabled && r.pattern && r.category)
+  } catch {
+    return []
+  }
+}
+
+function norm(v: unknown) {
+  return String(v ?? '').toLowerCase()
+}
+
+function applyRuleCategory(row: Tx, rules: LocalRule[]): string | '' {
+  for (const r of rules) {
+    const pat = norm(r.pattern)
+    if (!pat) continue
+    const fields: Array<'description' | 'counterparty'> = r.field ? [r.field] : ['description', 'counterparty']
+    if (fields.some((f) => norm((row as any)[f]).includes(pat))) return r.category
+  }
+  return ''
+}
