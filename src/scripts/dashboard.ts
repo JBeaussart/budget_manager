@@ -18,7 +18,6 @@ const feedback = document.getElementById('dash-feedback') as HTMLElement | null
 
 const filterYear = document.getElementById('filter-year') as HTMLSelectElement | null
 const filterMonth = document.getElementById('filter-month') as HTMLSelectElement | null
-const applyRulesToggle = document.getElementById('dash-apply-rules') as HTMLInputElement | null
 
 let pieChart: any = null
 let barChart: any = null
@@ -77,7 +76,7 @@ async function fetchYear(year: number): Promise<Tx[]> {
 function updateCardsAndPie() {
   const key = monthKey(state.year, state.month)
   const curRows = state.byMonth[key] || []
-  const rules = applyRulesToggle?.checked ? loadLocalRules() : []
+  const rules = loadLocalRules()
   const rowsWithRules = rules.length ? curRows.map((r) => ({ ...r, category: applyRuleCategory(r, rules) || r.category })) : curRows
   const inc = sumIncome(curRows as any)
   const exp = sumExpenses(curRows as any)
@@ -193,7 +192,6 @@ function bindFilters() {
     state.month = Number(filterMonth.value)
     updateCardsAndPie()
   })
-  applyRulesToggle?.addEventListener('change', () => updateCardsAndPie())
 }
 
 async function init() {

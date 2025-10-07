@@ -111,17 +111,90 @@ async function fetchPage(opts: { append?: boolean } = {}) {
   // Load local rules if toggle is enabled
   const rules = applyRulesToggle?.checked ? loadLocalRules() : []
 
+  // Known categories from filter select, current page, and local rules
+  const categoriesSet = new Set<string>()
+  if (catSelect) {
+    for (let i = 0; i < catSelect.options.length; i++) {
+      const v = catSelect.options[i].value
+      if (v) categoriesSet.add(v)
+    }
+  }
+  for (const r of (data || []) as Tx[]) {
+    if (r.category) categoriesSet.add(r.category)
+  }
+  // Also include categories declared by local rules so users can pick them
+  try {
+    const ruleDefs = loadLocalRules()
+    for (const rule of ruleDefs) {
+      if (rule.category) categoriesSet.add(rule.category)
+    }
+  } catch {}
+
   for (const row of (data || []) as Tx[]) {
     const tr = document.createElement('tr')
     const amountClass = row.amount < 0 ? 'text-rose-600' : 'text-emerald-600'
-    const displayCategory = rules.length ? applyRuleCategory(row, rules) || row.category || '' : row.category || ''
     tr.innerHTML = `
       <td class="px-3 py-2 text-slate-700">${formatDate(row.occurred_at)}</td>
       <td class="px-3 py-2 text-slate-700">${row.description ?? ''}</td>
       <td class="px-3 py-2 text-slate-700">${row.counterparty ?? ''}</td>
-      <td class="px-3 py-2 text-slate-700">${displayCategory}</td>
+      <td class="px-3 py-2 text-slate-700"></td>
       <td class="px-3 py-2 text-right font-medium ${amountClass}">${formatAmount(row.amount)}</td>
     `
+    const catTd = tr.children[3] as HTMLTableCellElement
+
+    // If a local rule applies, show the rule category and do not render the select
+    const overlay = rules.length ? applyRuleCategory(row, rules) : ''
+    if (overlay) {
+      catTd.textContent = overlay
+    } else {
+      // Build select for category (persisted DB value) when no rule applies
+      const select = document.createElement('select')
+      select.className = 'max-w-56 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900'
+      const opts: Array<{ value: string; label: string }> = [{ value: '', label: 'Non catégorisé' }]
+      const sorted = Array.from(categoriesSet).sort((a, b) => a.localeCompare(b))
+      for (const c of sorted) opts.push({ value: c, label: c })
+      if (row.category && !categoriesSet.has(row.category)) {
+        opts.push({ value: row.category, label: row.category })
+      }
+      for (const o of opts) {
+        const opt = document.createElement('option')
+        opt.value = o.value
+        opt.textContent = o.label
+        select.appendChild(opt)
+      }
+      select.value = row.category || ''
+
+      // Persist update on change
+      select.addEventListener('change', async () => {
+        const prev = row.category || ''
+        const next = select.value
+        if (prev === next) return
+        try {
+          setFeedback('Mise à jour de la catégorie...')
+          select.disabled = true
+          const payload: any = { category: next || null }
+          const { error: upErr } = await supabase.from('transactions').update(payload).eq('id', row.id)
+          if (upErr) throw upErr
+          row.category = next || ''
+          setFeedback('Catégorie mise à jour.', 'success')
+          // Ensure filter category list includes the new value
+          if (catSelect && next && !Array.from(catSelect.options).some((o) => o.value === next)) {
+            const o = document.createElement('option')
+            o.value = next
+            o.textContent = next
+            catSelect.appendChild(o)
+          }
+        } catch (err: any) {
+          console.error(err)
+          setFeedback(err?.message || 'Impossible de mettre à jour la catégorie.', 'error')
+          select.value = prev
+        } finally {
+          select.disabled = false
+        }
+      })
+
+      catTd.appendChild(select)
+    }
     tbody.appendChild(tr)
   }
 
