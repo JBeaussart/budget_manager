@@ -27,6 +27,7 @@ const monthsFull = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil
 const state = {
   year: new Date().getFullYear(),
   month: new Date().getMonth() + 1, // 1..12
+  allMonths: false,
   rows: [] as Tx[],
   byMonth: {} as Record<string, Tx[]>,
 }
@@ -55,7 +56,9 @@ function populateYearMonthSelectors() {
   for (let y = nowY; y >= nowY - 5; y--) years.push(y)
   filterYear.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join('')
   filterYear.value = String(state.year)
-  filterMonth.innerHTML = monthsFull.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('')
+  const monthOptions = [`<option value="all">Année complète</option>`]
+  monthOptions.push(...monthsFull.map((m, i) => `<option value="${i + 1}">${m}</option>`))
+  filterMonth.innerHTML = monthOptions.join('')
   filterMonth.value = String(state.month)
 }
 
@@ -75,7 +78,7 @@ async function fetchYear(year: number): Promise<Tx[]> {
 
 function updateCardsAndPie() {
   const key = monthKey(state.year, state.month)
-  const curRows = state.byMonth[key] || []
+  const curRows = state.allMonths ? state.rows : (state.byMonth[key] || [])
   const rules = loadLocalRules()
   const rowsWithRules = rules.length ? curRows.map((r) => ({ ...r, category: applyRuleCategory(r, rules) || r.category })) : curRows
   const inc = sumIncome(curRows as any)
@@ -84,7 +87,7 @@ function updateCardsAndPie() {
   if (cardIncome) cardIncome.textContent = fmt(inc)
   if (cardExpenses) cardExpenses.textContent = fmt(exp)
   if (cardSaving) cardSaving.textContent = fmt(sav)
-  if (pieMonthLabel) pieMonthLabel.textContent = `${monthsFull[state.month - 1]} ${state.year}`
+  if (pieMonthLabel) pieMonthLabel.textContent = state.allMonths ? `Année ${state.year}` : `${monthsFull[state.month - 1]} ${state.year}`
 
   const top = topCategories(rowsWithRules as any, 8)
   const sumTop = top.reduce((a, b) => a + b.total, 0)
@@ -189,7 +192,13 @@ function bindFilters() {
     await loadYear(state.year)
   })
   filterMonth.addEventListener('change', () => {
-    state.month = Number(filterMonth.value)
+    const v = filterMonth.value
+    if (v === 'all') {
+      state.allMonths = true
+    } else {
+      state.allMonths = false
+      state.month = Number(v)
+    }
     updateCardsAndPie()
   })
 }

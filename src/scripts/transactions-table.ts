@@ -16,6 +16,7 @@ const searchInput = document.getElementById('tx-filter-search') as HTMLInputElem
 const applyBtn = document.getElementById('tx-apply') as HTMLButtonElement | null
 const resetBtn = document.getElementById('tx-reset') as HTMLButtonElement | null
 const moreBtn = document.getElementById('tx-more') as HTMLButtonElement | null
+const deleteAllBtn = document.getElementById('tx-delete-all') as HTMLButtonElement | null
 const tbody = document.getElementById('tx-body') as HTMLElement | null
 const stats = document.getElementById('tx-stats') as HTMLElement | null
 const feedback = document.getElementById('tx-feedback') as HTMLElement | null
@@ -139,8 +140,10 @@ async function fetchPage(opts: { append?: boolean } = {}) {
       <td class="px-3 py-2 text-slate-700">${row.counterparty ?? ''}</td>
       <td class="px-3 py-2 text-slate-700"></td>
       <td class="px-3 py-2 text-right font-medium ${amountClass}">${formatAmount(row.amount)}</td>
+      <td class="px-3 py-2 text-right"></td>
     `
     const catTd = tr.children[3] as HTMLTableCellElement
+    const actionsTd = tr.children[5] as HTMLTableCellElement
 
     // If a local rule applies, show the rule category and do not render the select
     const overlay = rules.length ? applyRuleCategory(row, rules) : ''
@@ -195,6 +198,36 @@ async function fetchPage(opts: { append?: boolean } = {}) {
 
       catTd.appendChild(select)
     }
+
+    // Delete button in actions column
+    const delBtn = document.createElement('button')
+    delBtn.type = 'button'
+    delBtn.className = 'inline-flex h-8 w-8 items-center justify-center rounded-md border border-rose-200 text-rose-600 hover:bg-rose-50'
+    delBtn.title = 'Supprimer'
+    delBtn.setAttribute('aria-label', 'Supprimer')
+    delBtn.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-4 w-4">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+          d="M6 7h12M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-9 0l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M10 11v6m4-6v6" />
+      </svg>`
+    delBtn.addEventListener('click', async () => {
+      const ok = window.confirm('Supprimer cette transaction ?')
+      if (!ok) return
+      try {
+        setFeedback('Suppression...')
+        delBtn.disabled = true
+        const { error: delErr } = await supabase.from('transactions').delete().eq('id', row.id)
+        if (delErr) throw delErr
+        await fetchPage({ append: false })
+        setFeedback('Transaction supprimée.', 'success')
+      } catch (err: any) {
+        console.error(err)
+        setFeedback(err?.message || 'Suppression impossible.', 'error')
+        delBtn.disabled = false
+      }
+    })
+    actionsTd.appendChild(delBtn)
+
     tbody.appendChild(tr)
   }
 
@@ -256,6 +289,30 @@ applyFilters(true)
 window.addEventListener('storage', (e) => {
   if (e.key === 'bm_rules_v1' && applyRulesToggle?.checked) {
     fetchPage({ append: false })
+  }
+})
+
+// Delete all transactions (current user)
+deleteAllBtn?.addEventListener('click', async () => {
+  const ok = window.confirm('Supprimer TOUTES vos transactions ? Cette action est irréversible.')
+  if (!ok) return
+  try {
+    setFeedback('Suppression de toutes les transactions...')
+    deleteAllBtn.disabled = true
+    const { data: userRes, error: userErr } = await supabase.auth.getUser()
+    if (userErr || !userRes?.user) throw userErr || new Error('Utilisateur introuvable')
+    const userId = userRes.user.id
+    const { error: delErr } = await supabase.from('transactions').delete().eq('user_id', userId)
+    if (delErr) throw delErr
+    page = 0
+    if (catSelect) catSelect.value = ''
+    await fetchPage({ append: false })
+    setFeedback('Toutes vos transactions ont été supprimées.', 'success')
+  } catch (err: any) {
+    console.error(err)
+    setFeedback(err?.message || 'Suppression impossible.', 'error')
+  } finally {
+    deleteAllBtn.disabled = false
   }
 })
 
