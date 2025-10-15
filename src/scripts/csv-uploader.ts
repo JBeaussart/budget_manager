@@ -1,4 +1,4 @@
-import Papa from "papaparse";
+import Papa, { type ParseResult } from "papaparse";
 import { normalizeRows } from "../lib/normalizer";
 import { supabase } from "../lib/supabase";
 
@@ -36,16 +36,36 @@ const targets = [
   "type",
 ] as const;
 
-const state: any = {
-  file: null as File | null,
-  rows: [] as any[],
-  fields: [] as string[],
+type TargetField = (typeof targets)[number];
+type CsvRow = Record<string, unknown>;
+type ColumnMap = Record<TargetField, string>;
+
+interface UploaderState {
+  file: File | null;
+  rows: CsvRow[];
+  fields: string[];
+  delimiter: string;
+  map: ColumnMap;
+}
+
+const state: UploaderState = {
+  file: null,
+  rows: [],
+  fields: [],
   delimiter: ",",
-  map: Object.fromEntries(targets.map((t) => [t, ""] as const)) as Record<
-    string,
-    string
-  >,
+  map: createEmptyMap(),
 };
+
+function createEmptyMap(): ColumnMap {
+  return targets.reduce((acc, target) => {
+    acc[target] = "";
+    return acc;
+  }, {} as ColumnMap);
+}
+
+function isTargetField(value: string | null): value is TargetField {
+  return Boolean(value && targets.includes(value as TargetField));
+}
 
 function setFeedback(msg: string, type: "info" | "success" | "error" = "info") {
   if (!feedback) return;
@@ -64,16 +84,16 @@ function resetAll() {
   state.rows = [];
   state.fields = [];
   state.delimiter = ",";
-  state.map = Object.fromEntries(targets.map((t) => [t, ""]));
+  state.map = createEmptyMap();
 
   if (fileInput) fileInput.value = "";
   if (fileInfo) fileInfo.textContent = "Aucun fichier sélectionné.";
 
-  Array.from(document.querySelectorAll("[data-map-target]")).forEach((el) => {
-    if (el instanceof HTMLSelectElement) {
+  document
+    .querySelectorAll<HTMLSelectElement>("[data-map-target]")
+    .forEach((el) => {
       el.innerHTML = "";
-    }
-  });
+    });
 
   mappingEl?.classList.add("hidden");
   previewEl?.classList.add("hidden");
@@ -83,7 +103,7 @@ function resetAll() {
   setFeedback("");
 }
 
-function guessMapping(fields: string[]) {
+function guessMapping(fields: string[]): Partial<ColumnMap> {
   const lower = fields.map((f) => ({ raw: f, l: f.toLowerCase() }));
 
   const findAny = (...candidates: string[]) => {
@@ -145,14 +165,16 @@ function guessMapping(fields: string[]) {
 }
 
 function populateMapping(fields: string[]) {
-  const selects = Array.from(document.querySelectorAll("[data-map-target]"));
+  const selects = Array.from(
+    document.querySelectorAll<HTMLSelectElement>("[data-map-target]")
+  );
   const options = ["— (ignorer)", ...fields];
   const guessed = guessMapping(fields);
-  targets.forEach((t) => (state.map[t] = ""));
+  state.map = createEmptyMap();
 
   for (const el of selects) {
-    if (!(el instanceof HTMLSelectElement)) continue;
-    const target = el.getAttribute("data-map-target") as string | null;
+    const targetAttr = el.getAttribute("data-map-target");
+    if (!isTargetField(targetAttr)) continue;
     el.innerHTML = "";
     for (const opt of options) {
       const o = document.createElement("option");
@@ -160,31 +182,35 @@ function populateMapping(fields: string[]) {
       o.textContent = opt;
       el.appendChild(o);
     }
-    if (target && (guessed as any)[target]) {
-      el.value = (guessed as any)[target];
-      state.map[target] = (guessed as any)[target];
+    const guessedValue = guessed[targetAttr];
+    if (guessedValue) {
+      el.value = guessedValue;
+      state.map[targetAttr] = guessedValue;
     } else {
       el.value = "";
     }
     el.addEventListener("change", () => {
-      const key = el.getAttribute("data-map-target") || "";
-      state.map[key] = el.value;
-      enforceUniqueForDescriptionAndCounterparty(key);
+      const keyAttr = el.getAttribute("data-map-target");
+      if (!isTargetField(keyAttr)) return;
+      state.map[keyAttr] = el.value;
+      enforceUniqueForDescriptionAndCounterparty(keyAttr);
     });
   }
   enforceUniqueForDescriptionAndCounterparty();
 }
 
-function enforceUniqueForDescriptionAndCounterparty(changedKey = "") {
-  const descKey = "description";
-  const cpKey = "counterparty";
+function enforceUniqueForDescriptionAndCounterparty(changedKey?: TargetField) {
+  const descKey: TargetField = "description";
+  const cpKey: TargetField = "counterparty";
   const desc = state.map[descKey];
   const cp = state.map[cpKey];
   if (desc && cp && desc === cp) {
-    const toClear = changedKey === descKey ? cpKey : descKey;
+    const toClear: TargetField = changedKey === descKey ? cpKey : descKey;
     state.map[toClear] = "";
-    const el = document.querySelector(`select[data-map-target="${toClear}"]`);
-    if (el instanceof HTMLSelectElement) el.value = "";
+    const el = document.querySelector<HTMLSelectElement>(
+      `select[data-map-target="${toClear}"]`
+    );
+    if (el) el.value = "";
     setFeedback(
       "Le même champ ne peut pas être utilisé pour description et contrepartie. Un des deux a été réinitialisé."
     );
@@ -248,9 +274,9 @@ function renderPreview() {
   }
 }
 
-async function parseFile(file: File) {
-  return new Promise<any>((resolve, reject) => {
-    Papa.parse(file, {
+async function parseFile(file: File): Promise<ParseResult<CsvRow>> {
+  return new Promise((resolve, reject) => {
+    Papa.parse<CsvRow>(file, {
       header: true,
       skipEmptyLines: true,
       dynamicTyping: false,
@@ -276,13 +302,14 @@ fileInput?.addEventListener("change", async () => {
       )} Ko`;
 
     const result = await parseFile(file);
-    const { data = [], meta = {} } = result || {};
-    const fields = Array.isArray((meta as any)?.fields)
-      ? (meta as any).fields
-      : Object.keys(data[0] || {});
+    const { data, meta } = result;
+    const fields =
+      Array.isArray(meta.fields) && meta.fields.length
+        ? meta.fields
+        : Object.keys(data[0] ?? {});
     state.rows = Array.isArray(data) ? data : [];
     state.fields = fields;
-    state.delimiter = (meta as any)?.delimiter || ",";
+    state.delimiter = meta.delimiter || ",";
 
     populateMapping(fields);
     if (delimiterInfo)

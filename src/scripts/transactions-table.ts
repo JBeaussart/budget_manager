@@ -1,3 +1,4 @@
+import { applyRuleCategory, fetchRules, type Rule } from "../lib/rules";
 import { supabase } from "../lib/supabase";
 
 type Tx = {
@@ -37,13 +38,29 @@ const deleteAllBtn = document.getElementById(
 const tbody = document.getElementById("tx-body") as HTMLElement | null;
 const stats = document.getElementById("tx-stats") as HTMLElement | null;
 const feedback = document.getElementById("tx-feedback") as HTMLElement | null;
-// Rules are always applied on this page (no toggle UI)
-const applyRulesToggle = null as unknown as HTMLInputElement | null;
 const listTop = document.getElementById("tx-list-top") as HTMLElement | null;
 
 const PAGE_SIZE = 40;
 let page = 0;
 let total = 0;
+let rulesLoaded = false;
+let rules: Rule[] = [];
+
+async function refreshRules() {
+  try {
+    const fetched = await fetchRules();
+    rules = fetched;
+    rulesLoaded = true;
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function ensureRules() {
+  if (!rulesLoaded) {
+    await refreshRules();
+  }
+}
 
 function setFeedback(msg: string, type: "info" | "success" | "error" = "info") {
   if (!feedback) return;
@@ -96,6 +113,7 @@ function rangeStartEnd() {
 
 async function fetchPage(opts: { append?: boolean } = {}) {
   if (!tbody) return;
+  await ensureRules();
   const [start, end] = rangeStartEnd();
   const category = (catSelect?.value || "").trim();
   const search = (searchInput?.value || "").trim();
@@ -143,10 +161,11 @@ async function fetchPage(opts: { append?: boolean } = {}) {
   const loadedBefore = tbody.querySelectorAll("tr").length;
   const loadedAfter = loadedBefore + (data?.length || 0);
 
-  // Load local rules if toggle is enabled
-  const rules = loadLocalRules();
+  const activeRules = rules.filter(
+    (rule) => rule.enabled && rule.pattern && rule.category
+  );
 
-  // Known categories from filter select, current page, and local rules
+  // Known categories from filter select, current page, and rules
   const categoriesSet = new Set<string>();
   if (catSelect) {
     for (let i = 0; i < catSelect.options.length; i++) {
@@ -157,13 +176,9 @@ async function fetchPage(opts: { append?: boolean } = {}) {
   for (const r of (data || []) as Tx[]) {
     if (r.category) categoriesSet.add(r.category);
   }
-  // Also include categories declared by local rules so users can pick them
-  try {
-    const ruleDefs = loadLocalRules();
-    for (const rule of ruleDefs) {
-      if (rule.category) categoriesSet.add(rule.category);
-    }
-  } catch {}
+  for (const rule of activeRules) {
+    categoriesSet.add(rule.category);
+  }
 
   for (const row of (data || []) as Tx[]) {
     const tr = document.createElement("tr");
@@ -181,12 +196,12 @@ async function fetchPage(opts: { append?: boolean } = {}) {
     const catTd = tr.children[3] as HTMLTableCellElement;
     const actionsTd = tr.children[5] as HTMLTableCellElement;
 
-    // If a local rule applies, show the rule category and do not render the select
-    const overlay = rules.length ? applyRuleCategory(row, rules) : "";
+    const overlay =
+      activeRules.length > 0 ? applyRuleCategory(row, activeRules) : "";
     if (overlay) {
       catTd.textContent = overlay;
     } else {
-      // Build select for category (persisted DB value) when no rule applies
+      // Build select for category (persisted DB value)
       const select = document.createElement("select");
       select.className =
         "max-w-56 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900";
@@ -412,16 +427,12 @@ function renderPagination() {
   );
 }
 
-// No toggle: rules are always applied
-
 // Initial load: show latest 40 across all months (no month filter)
 applyFilters(true);
 
-// Re-render if rules change in another tab/page
-window.addEventListener("storage", (e) => {
-  if (e.key === "bm_rules_v1") {
-    fetchPage({ append: false });
-  }
+window.addEventListener("rules:updated", () => {
+  rulesLoaded = false;
+  fetchPage({ append: false });
 });
 
 // Delete all transactions (current user)
@@ -455,41 +466,3 @@ deleteAllBtn?.addEventListener("click", async () => {
 });
 
 export {};
-
-// ----- Local rules helpers -----
-type LocalRule = {
-  pattern: string;
-  field?: "description" | "counterparty";
-  category: string;
-  enabled: boolean;
-};
-
-function loadLocalRules(): LocalRule[] {
-  try {
-    const raw = localStorage.getItem("bm_rules_v1");
-    const arr = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(arr)) return [];
-    return (arr as any[]).filter(
-      (r) => r && r.enabled && r.pattern && r.category
-    );
-  } catch {
-    return [];
-  }
-}
-
-function norm(v: unknown) {
-  return String(v ?? "").toLowerCase();
-}
-
-function applyRuleCategory(row: Tx, rules: LocalRule[]): string | "" {
-  for (const r of rules) {
-    const pat = norm(r.pattern);
-    if (!pat) continue;
-    const fields: Array<"description" | "counterparty"> = r.field
-      ? [r.field]
-      : ["description", "counterparty"];
-    if (fields.some((f) => norm((row as any)[f]).includes(pat)))
-      return r.category;
-  }
-  return "";
-}

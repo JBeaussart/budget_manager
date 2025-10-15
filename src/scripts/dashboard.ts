@@ -5,6 +5,11 @@ import {
   sumIncome,
   topCategories,
 } from "../lib/metrics";
+import {
+  applyRuleCategory,
+  fetchRules,
+  type Rule,
+} from "../lib/rules";
 import { supabase } from "../lib/supabase";
 
 type Tx = {
@@ -65,6 +70,7 @@ const state = {
   allMonths: false,
   rows: [] as Tx[],
   byMonth: {} as Record<string, Tx[]>,
+  rules: [] as Rule[],
 };
 
 function fmt(n: number) {
@@ -123,11 +129,13 @@ async function fetchYear(year: number): Promise<Tx[]> {
 function updateCardsAndPie() {
   const key = monthKey(state.year, state.month);
   const curRows = state.allMonths ? state.rows : state.byMonth[key] || [];
-  const rules = loadLocalRules();
-  const rowsWithRules = rules.length
-    ? curRows.map((r) => ({
-        ...r,
-        category: applyRuleCategory(r, rules) || r.category,
+  const activeRules = state.rules.filter(
+    (rule) => rule.enabled && rule.pattern && rule.category
+  );
+  const rowsWithRules = activeRules.length
+    ? curRows.map((row) => ({
+        ...row,
+        category: applyRuleCategory(row, activeRules) || row.category,
       }))
     : curRows;
   const inc = sumIncome(curRows as any);
@@ -272,6 +280,16 @@ async function loadYear(year: number) {
   updateCardsAndPie();
 }
 
+async function loadRulesState() {
+  try {
+    const rules = await fetchRules();
+    state.rules = rules;
+    updateCardsAndPie();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 function bindFilters() {
   if (!filterYear || !filterMonth) return;
   filterYear.addEventListener("change", async () => {
@@ -294,6 +312,7 @@ async function init() {
   try {
     populateYearMonthSelectors();
     await loadYear(state.year);
+    await loadRulesState();
     bindFilters();
   } catch (err) {
     console.error(err);
@@ -306,42 +325,8 @@ async function init() {
 
 init();
 
+window.addEventListener("rules:updated", () => {
+  loadRulesState();
+});
+
 export {};
-
-// ----- Local rules helpers (shared behavior with transactions table) -----
-type LocalRule = {
-  pattern: string;
-  field?: "description" | "counterparty";
-  category: string;
-  enabled: boolean;
-};
-
-function loadLocalRules(): LocalRule[] {
-  try {
-    const raw = localStorage.getItem("bm_rules_v1");
-    const arr = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(arr)) return [];
-    return (arr as any[]).filter(
-      (r) => r && r.enabled && r.pattern && r.category
-    );
-  } catch {
-    return [];
-  }
-}
-
-function norm(v: unknown) {
-  return String(v ?? "").toLowerCase();
-}
-
-function applyRuleCategory(row: Tx, rules: LocalRule[]): string | "" {
-  for (const r of rules) {
-    const pat = norm(r.pattern);
-    if (!pat) continue;
-    const fields: Array<"description" | "counterparty"> = r.field
-      ? [r.field]
-      : ["description", "counterparty"];
-    if (fields.some((f) => norm((row as any)[f]).includes(pat)))
-      return r.category;
-  }
-  return "";
-}

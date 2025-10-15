@@ -1,23 +1,13 @@
+import { applyRuleCategory, fetchRules, type Rule } from "../lib/rules";
 import { supabase } from "../lib/supabase";
-
-type Rule = {
-  id: string;
-  pattern: string;
-  // optional: if omitted, applies to description or counterparty
-  field?: "description" | "counterparty";
-  category: string;
-  enabled: boolean;
-};
 
 type Tx = {
   id: string;
   occurred_at: string;
-  description?: string;
-  counterparty?: string;
-  category?: string;
+  description?: string | null;
+  counterparty?: string | null;
+  category?: string | null;
 };
-
-const LS_KEY = "bm_rules_v1";
 
 const form = document.getElementById("rule-form") as HTMLFormElement | null;
 const inputPattern = document.getElementById(
@@ -30,15 +20,12 @@ const inputEnabled = document.getElementById(
   "rule-enabled"
 ) as HTMLInputElement | null;
 const rulesBody = document.getElementById("rules-body") as HTMLElement | null;
-const rulesExport = document.getElementById(
-  "rules-export"
-) as HTMLButtonElement | null;
-const rulesImport = document.getElementById(
-  "rules-import"
-) as HTMLButtonElement | null;
-
+const feedback = document.getElementById("rules-feedback") as HTMLElement | null;
 const monthInput = document.getElementById(
   "rc-month"
+) as HTMLInputElement | null;
+const allCheckbox = document.getElementById(
+  "rc-all"
 ) as HTMLInputElement | null;
 const applyBtn = document.getElementById(
   "rules-apply"
@@ -46,12 +33,6 @@ const applyBtn = document.getElementById(
 const commitBtn = document.getElementById(
   "rules-commit"
 ) as HTMLButtonElement | null;
-const allCheckbox = document.getElementById(
-  "rc-all"
-) as HTMLInputElement | null;
-const feedback = document.getElementById(
-  "rules-feedback"
-) as HTMLElement | null;
 const preview = document.getElementById("rules-preview") as HTMLElement | null;
 const previewBody = document.getElementById(
   "rules-preview-body"
@@ -63,25 +44,9 @@ const exportChangesBtn = document.getElementById(
   "rules-export-changes"
 ) as HTMLButtonElement | null;
 
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
-}
-
-function loadRules(): Rule[] {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return [];
-    return arr as Rule[];
-  } catch {
-    return [];
-  }
-}
-
-function saveRules(rules: Rule[]) {
-  localStorage.setItem(LS_KEY, JSON.stringify(rules));
-}
+const state = {
+  rules: [] as Rule[],
+};
 
 function setFeedback(msg: string, type: "info" | "success" | "error" = "info") {
   if (!feedback) return;
@@ -95,75 +60,99 @@ function setFeedback(msg: string, type: "info" | "success" | "error" = "info") {
   feedback.className = `min-h-[1.25rem] text-sm ${color}`;
 }
 
+async function loadRules() {
+  try {
+    const rules = await fetchRules();
+    state.rules = rules;
+    renderRules();
+  } catch (err) {
+    console.error(err);
+    setFeedback(
+      err instanceof Error ? err.message : "Impossible de charger les règles.",
+      "error"
+    );
+  }
+}
+
 function renderRules() {
-  const rules = loadRules();
   if (!rulesBody) return;
+  if (!state.rules.length) {
+    rulesBody.innerHTML = `
+      <tr>
+        <td colspan="4" class="px-3 py-4 text-center text-sm text-slate-500">
+          Aucune règle enregistrée.
+        </td>
+      </tr>
+    `;
+    return;
+  }
   rulesBody.innerHTML = "";
-  for (const r of rules) {
+  for (const rule of state.rules) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td class="px-3 py-2 text-slate-700">
-        <input type="checkbox" data-action="toggle" data-id="${r.id}" ${
-      r.enabled ? "checked" : ""
+        <input type="checkbox" data-action="toggle" data-id="${rule.id}" ${
+      rule.enabled ? "checked" : ""
     } class="h-4 w-4 rounded border-slate-300 text-emerald-600" />
       </td>
-      <td class="px-3 py-2 text-slate-700">${r.pattern}</td>
-      <td class="px-3 py-2 text-slate-700">${r.category}</td>
+      <td class="px-3 py-2 text-slate-700">${rule.pattern}</td>
+      <td class="px-3 py-2 text-slate-700">${rule.category}</td>
       <td class="px-3 py-2 text-right">
-        <div class="inline-flex gap-2">
-          <button data-action="up" data-id="${
-            r.id
-          }" class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">↑</button>
-          <button data-action="down" data-id="${
-            r.id
-          }" class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">↓</button>
-          <button data-action="delete" data-id="${
-            r.id
-          }" class="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">Supprimer</button>
-        </div>
+        <button data-action="delete" data-id="${
+          rule.id
+        }" class="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50">Supprimer</button>
       </td>
     `;
     rulesBody.appendChild(tr);
   }
 }
 
-function addRule(rule: Rule) {
-  const rules = loadRules();
-  rules.push(rule);
-  saveRules(rules);
-  renderRules();
+async function addRule(rule: {
+  pattern: string;
+  category: string;
+  enabled: boolean;
+}) {
+  const {
+    data: { user },
+    error: userErr,
+  } = await supabase.auth.getUser();
+  if (userErr || !user) throw userErr || new Error("Utilisateur introuvable");
+  const { error } = await supabase.from("rules").insert({
+    user_id: user.id,
+    pattern: rule.pattern,
+    category: rule.category,
+    enabled: rule.enabled,
+  });
+  if (error) throw error;
+  await loadRules();
+  notifyRulesUpdated();
 }
 
-function deleteRule(id: string) {
-  const rules = loadRules().filter((r) => r.id !== id);
-  saveRules(rules);
-  renderRules();
+async function toggleRule(id: string, enabled: boolean) {
+  const { error } = await supabase
+    .from("rules")
+    .update({ enabled })
+    .eq("id", id);
+  if (error) throw error;
+  await loadRules();
+  notifyRulesUpdated();
 }
 
-function toggleRule(id: string, enabled: boolean) {
-  const rules = loadRules().map((r) => (r.id === id ? { ...r, enabled } : r));
-  saveRules(rules);
+async function deleteRule(id: string) {
+  const { error } = await supabase.from("rules").delete().eq("id", id);
+  if (error) throw error;
+  await loadRules();
+  notifyRulesUpdated();
 }
 
-function moveRule(id: string, dir: "up" | "down") {
-  const rules = loadRules();
-  const idx = rules.findIndex((r) => r.id === id);
-  if (idx < 0) return;
-  const swapWith = dir === "up" ? idx - 1 : idx + 1;
-  if (swapWith < 0 || swapWith >= rules.length) return;
-  const tmp = rules[idx];
-  rules[idx] = rules[swapWith];
-  rules[swapWith] = tmp;
-  saveRules(rules);
-  renderRules();
-}
-
-function norm(s: unknown) {
-  return String(s ?? "").toLowerCase();
+function notifyRulesUpdated() {
+  window.dispatchEvent(new CustomEvent("rules:updated"));
 }
 
 function applyRulesLocally(rows: Tx[], rules: Rule[]) {
-  const active = rules.filter((r) => r.enabled && r.pattern && r.category);
+  const active = rules.filter(
+    (rule) => rule.enabled && rule.pattern && rule.category
+  );
   const changes: Array<{
     id: string;
     occurred_at: string;
@@ -172,24 +161,9 @@ function applyRulesLocally(rows: Tx[], rules: Rule[]) {
     oldCategory: string;
     newCategory: string;
   }> = [];
-
+  if (!active.length) return changes;
   for (const row of rows) {
-    let newCat = row.category || "";
-    for (const rule of active) {
-      const pat = norm(rule.pattern);
-      if (!pat) continue;
-      const fieldsToCheck: Array<"description" | "counterparty"> = rule.field
-        ? [rule.field]
-        : ["description", "counterparty"];
-      const matched = fieldsToCheck.some((f) =>
-        norm((row as any)[f]).includes(pat)
-      );
-      if (matched) {
-        newCat = rule.category;
-        // First matching rule wins; break to keep deterministic order
-        break;
-      }
-    }
+    const newCat = applyRuleCategory(row, active);
     if (newCat && newCat !== (row.category || "")) {
       changes.push({
         id: row.id,
@@ -244,15 +218,14 @@ function renderPreview(changes: ReturnType<typeof applyRulesLocally>) {
   preview.classList.remove("hidden");
   previewBody.innerHTML = "";
   previewSummary.textContent = `${changes.length} transaction(s) auraient une nouvelle catégorie.`;
-
-  for (const c of changes.slice(0, 50)) {
+  for (const change of changes.slice(0, 50)) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td class="px-3 py-2 text-slate-700">${c.occurred_at}</td>
-      <td class="px-3 py-2 text-slate-700">${c.description}</td>
-      <td class="px-3 py-2 text-slate-700">${c.counterparty}</td>
-      <td class="px-3 py-2 text-slate-700">${c.oldCategory}</td>
-      <td class="px-3 py-2 text-slate-700">${c.newCategory}</td>
+      <td class="px-3 py-2 text-slate-700">${change.occurred_at}</td>
+      <td class="px-3 py-2 text-slate-700">${change.description}</td>
+      <td class="px-3 py-2 text-slate-700">${change.counterparty}</td>
+      <td class="px-3 py-2 text-slate-700">${change.oldCategory}</td>
+      <td class="px-3 py-2 text-slate-700">${change.newCategory}</td>
     `;
     previewBody.appendChild(tr);
   }
@@ -264,7 +237,7 @@ function exportChangesCSV(changes: ReturnType<typeof applyRulesLocally>) {
   const csv = [
     headers.join(","),
     ...rows.map((r) =>
-      r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")
+      r.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(",")
     ),
   ].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -277,107 +250,6 @@ function exportChangesCSV(changes: ReturnType<typeof applyRulesLocally>) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
-
-// Event wiring
-form?.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const pattern = (inputPattern?.value || "").trim();
-  const category = (inputCategory?.value || "").trim();
-  const enabled = !!inputEnabled?.checked;
-  if (!pattern || !category) {
-    setFeedback("Renseignez un mot-clé et une catégorie.", "error");
-    return;
-  }
-  // Field is not required; rule will match description OR counterparty
-  addRule({ id: uid(), pattern, category, enabled });
-  inputPattern!.value = "";
-  inputCategory!.value = "";
-  setFeedback("Règle ajoutée.", "success");
-});
-
-rulesBody?.addEventListener("click", (e) => {
-  const t = e.target as HTMLElement;
-  const action = t.getAttribute("data-action");
-  const id = t.getAttribute("data-id");
-  if (!action || !id) return;
-  if (action === "delete") {
-    deleteRule(id);
-    setFeedback("Règle supprimée.", "success");
-  } else if (action === "up" || action === "down") {
-    moveRule(id, action as "up" | "down");
-  }
-});
-
-rulesBody?.addEventListener("change", (e) => {
-  const t = e.target as HTMLInputElement;
-  const action = t.getAttribute("data-action");
-  const id = t.getAttribute("data-id");
-  if (action === "toggle" && id) {
-    toggleRule(id, t.checked);
-  }
-});
-
-rulesExport?.addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify(loadRules(), null, 2)], {
-    type: "application/json",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "rules.json";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-});
-
-rulesImport?.addEventListener("click", async () => {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "application/json,.json";
-  input.onchange = async () => {
-    const file = input.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const arr = JSON.parse(text);
-      if (!Array.isArray(arr)) throw new Error("Invalid JSON rules");
-      saveRules(arr);
-      renderRules();
-      setFeedback("Règles importées.", "success");
-    } catch (err) {
-      console.error(err);
-      setFeedback("Fichier de règles invalide.", "error");
-    }
-  };
-  input.click();
-});
-
-applyBtn?.addEventListener("click", async () => {
-  try {
-    setFeedback("Chargement des transactions...");
-    const rows = await fetchScope(
-      monthInput?.value || null,
-      !!allCheckbox?.checked
-    );
-    const changes = applyRulesLocally(rows, loadRules());
-    renderPreview(changes);
-    setFeedback(
-      changes.length ? "Prévisualisation prête." : "Aucun changement proposé.",
-      changes.length ? "success" : "info"
-    );
-    exportChangesBtn!.onclick = () => exportChangesCSV(changes);
-    if (commitBtn) commitBtn.onclick = () => doCommit(changes);
-  } catch (err) {
-    console.error(err);
-    setFeedback(
-      err instanceof Error
-        ? err.message
-        : "Erreur lors de la prévisualisation.",
-      "error"
-    );
-  }
-});
 
 async function doCommit(changes: ReturnType<typeof applyRulesLocally>) {
   try {
@@ -394,7 +266,10 @@ async function doCommit(changes: ReturnType<typeof applyRulesLocally>) {
       setFeedback("Session introuvable. Connectez-vous.", "error");
       return;
     }
-    const updates = changes.map((c) => ({ id: c.id, category: c.newCategory }));
+    const updates = changes.map((change) => ({
+      id: change.id,
+      category: change.newCategory,
+    }));
     const res = await fetch("/api/transactions/update-categories", {
       method: "POST",
       headers: {
@@ -413,6 +288,7 @@ async function doCommit(changes: ReturnType<typeof applyRulesLocally>) {
       "success"
     );
     preview?.classList.add("hidden");
+    notifyRulesUpdated();
   } catch (err) {
     console.error(err);
     setFeedback(
@@ -422,13 +298,102 @@ async function doCommit(changes: ReturnType<typeof applyRulesLocally>) {
   }
 }
 
-// Init
+form?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const pattern = (inputPattern?.value || "").trim();
+  const category = (inputCategory?.value || "").trim();
+  const enabled = !!inputEnabled?.checked;
+  if (!pattern || !category) {
+    setFeedback("Renseignez un mot-clé et une catégorie.", "error");
+    return;
+  }
+  try {
+    setFeedback("Création de la règle...", "info");
+    await addRule({ pattern, category, enabled });
+    if (inputPattern) inputPattern.value = "";
+    if (inputCategory) inputCategory.value = "";
+    if (inputEnabled) inputEnabled.checked = true;
+    setFeedback("Règle enregistrée.", "success");
+  } catch (err) {
+    console.error(err);
+    setFeedback(
+      err instanceof Error ? err.message : "Impossible d'enregistrer la règle.",
+      "error"
+    );
+  }
+});
+
+rulesBody?.addEventListener("change", async (event) => {
+  const target = event.target as HTMLInputElement;
+  const action = target.getAttribute("data-action");
+  const id = target.getAttribute("data-id");
+  if (action === "toggle" && id) {
+    try {
+      await toggleRule(id, target.checked);
+      setFeedback("Règle mise à jour.", "success");
+    } catch (err) {
+      console.error(err);
+      setFeedback(
+        err instanceof Error ? err.message : "Échec de la mise à jour.",
+        "error"
+      );
+    }
+  }
+});
+
+rulesBody?.addEventListener("click", async (event) => {
+  const target = event.target as HTMLElement;
+  const action = target.getAttribute("data-action");
+  const id = target.getAttribute("data-id");
+  if (action === "delete" && id) {
+    const confirmDelete = window.confirm("Supprimer cette règle ?");
+    if (!confirmDelete) return;
+    try {
+      await deleteRule(id);
+      setFeedback("Règle supprimée.", "success");
+    } catch (err) {
+      console.error(err);
+      setFeedback(
+        err instanceof Error ? err.message : "Suppression impossible.",
+        "error"
+      );
+    }
+  }
+});
+
+applyBtn?.addEventListener("click", async () => {
+  try {
+    setFeedback("Chargement des transactions...");
+    const rows = await fetchScope(
+      monthInput?.value || null,
+      !!allCheckbox?.checked
+    );
+    const changes = applyRulesLocally(rows, state.rules);
+    renderPreview(changes);
+    setFeedback(
+      changes.length ? "Prévisualisation prête." : "Aucun changement proposé.",
+      changes.length ? "success" : "info"
+    );
+    if (exportChangesBtn)
+      exportChangesBtn.onclick = () => exportChangesCSV(changes);
+    if (commitBtn) commitBtn.onclick = () => doCommit(changes);
+  } catch (err) {
+    console.error(err);
+    setFeedback(
+      err instanceof Error
+        ? err.message
+        : "Erreur lors de la prévisualisation.",
+      "error"
+    );
+  }
+});
+
 (function init() {
   const now = new Date();
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, "0");
   if (monthInput) monthInput.value = `${y}-${m}`;
-  renderRules();
+  loadRules();
 })();
 
 export {};
