@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import logoutScript from '../scripts/logout.js?url';
 ---
 
 <Layout>
@@ -11,19 +12,4 @@ import Layout from '../layouts/Layout.astro';
   </section>
 </Layout>
 
-<script type="module">
-  import { supabase } from '/src/lib/supabase'
-
-  try {
-    await supabase.auth.signOut({ scope: 'local' })
-  } catch (error) {
-    console.error('Erreur de déconnexion', error)
-  } finally {
-    try {
-      await fetch('/api/auth/session', { method: 'DELETE', credentials: 'include' })
-    } catch (error) {
-      console.error('Impossible de nettoyer la session côté serveur', error)
-    }
-    window.location.href = '/login?auth=none'
-  }
-</script>
+<script type="module" src={logoutScript}></script>

@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import AppShell from '../../components/AppShell.astro';
+import appIndexScript from '../../scripts/app-index.js?url';
 
 export const prerender = false
 ---
@@ -37,26 +38,4 @@ export const prerender = false
   </AppShell>
 </Layout>
 
-<script type="module">
-  import { supabase } from '/src/lib/supabase'
-
-  const userLabel = document.querySelector('#current-user')
-
-  try {
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser()
-
-    if (error) throw error
-
-    if (user?.email) {
-      userLabel.textContent = `Connecté en tant que ${user.email}`
-    } else {
-      userLabel.textContent = 'Utilisateur non identifié'
-    }
-  } catch (error) {
-    console.error('[app/index] getUser failed', error)
-    userLabel.textContent = 'Utilisateur non identifié'
-  }
-</script>
+<script type="module" src={appIndexScript}></script>

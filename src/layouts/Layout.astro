@@ -1,5 +1,8 @@
 ---
 import "../styles/global.css";
+
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL ?? "";
+const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY ?? "";
 ---
 
 <!doctype html>
@@ -14,10 +17,10 @@ import "../styles/global.css";
 			name="description"
 			content="Budget Manager – import CSV, catégorisation Supabase et dashboard Astro pour piloter votre budget."
 		/>
-	</head>
-	<body>
+ </head>
+ <body data-supabase-url={supabaseUrl} data-supabase-anon-key={supabaseAnonKey}>
 		<slot />
-	</body>
+ </body>
 </html>
 
 <style>
