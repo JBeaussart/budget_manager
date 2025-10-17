@@ -79,7 +79,9 @@ export function normalizeRow(row: any, map: Record<string, string>): NormalizedT
   }
 
   if (!Number.isFinite(amount)) {
-    throw new Error('Invalid amount for row')
+    const sourceColumn = map.amount || '(montant non défini)'
+    const rawValue = map.amount ? row[map.amount] : undefined
+    throw new Error(`Montant invalide (colonne "${sourceColumn}", valeur "${String(rawValue ?? '')}")`)
   }
 
   const description = map.description ? String(row[map.description] ?? '').trim() || undefined : undefined
@@ -99,5 +101,14 @@ export function normalizeRow(row: any, map: Record<string, string>): NormalizedT
 }
 
 export function normalizeRows(rows: any[], map: Record<string, string>): NormalizedTx[] {
-  return rows.map((r) => normalizeRow(r, map))
+  return rows.map((row, index) => {
+    try {
+      return normalizeRow(row, map)
+    } catch (error) {
+      if (error instanceof Error) {
+        error.message = `[ligne ${index + 1}] ${error.message}`
+      }
+      throw error
+    }
+  })
 }

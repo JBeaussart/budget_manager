@@ -1,5 +1,8 @@
-import { applyRuleCategory, fetchRules, type Rule } from "../lib/rules";
+import { applyRuleCategory, type Rule } from "../lib/rules";
 import { supabase } from "../lib/supabase";
+import { rulesStore } from "./stores/rules-store";
+import { createFeedbackController } from "./utils/feedback";
+import { requireSession, requireUser } from "./utils/auth";
 
 type Tx = {
   id: string;
@@ -44,27 +47,23 @@ const exportChangesBtn = document.getElementById(
   "rules-export-changes"
 ) as HTMLButtonElement | null;
 
-const state = {
-  rules: [] as Rule[],
-};
+let currentRules: Rule[] = [];
 
-function setFeedback(msg: string, type: "info" | "success" | "error" = "info") {
-  if (!feedback) return;
-  const color =
-    type === "error"
-      ? "text-rose-600"
-      : type === "success"
-      ? "text-emerald-600"
-      : "text-slate-600";
-  feedback.textContent = msg;
-  feedback.className = `min-h-[1.25rem] text-sm ${color}`;
-}
+const feedbackCtrl = createFeedbackController(feedback, {
+  baseClass: "min-h-[1.25rem] text-sm",
+});
+feedbackCtrl.clear();
+const setFeedback = (msg: string, type: "info" | "success" | "error" = "info") =>
+  feedbackCtrl.set(msg, type);
 
-async function loadRules() {
+rulesStore.subscribe((rules) => {
+  currentRules = rules;
+  renderRules();
+});
+
+async function loadRules(force = false) {
   try {
-    const rules = await fetchRules();
-    state.rules = rules;
-    renderRules();
+    await rulesStore.ensure(force);
   } catch (err) {
     console.error(err);
     setFeedback(
@@ -76,7 +75,7 @@ async function loadRules() {
 
 function renderRules() {
   if (!rulesBody) return;
-  if (!state.rules.length) {
+  if (!currentRules.length) {
     rulesBody.innerHTML = `
       <tr>
         <td colspan="4" class="px-3 py-4 text-center text-sm text-slate-500">
@@ -87,7 +86,7 @@ function renderRules() {
     return;
   }
   rulesBody.innerHTML = "";
-  for (const rule of state.rules) {
+  for (const rule of currentRules) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td class="px-3 py-2 text-slate-700">
@@ -112,11 +111,7 @@ async function addRule(rule: {
   category: string;
   enabled: boolean;
 }) {
-  const {
-    data: { user },
-    error: userErr,
-  } = await supabase.auth.getUser();
-  if (userErr || !user) throw userErr || new Error("Utilisateur introuvable");
+  const user = await requireUser();
   const { error } = await supabase.from("rules").insert({
     user_id: user.id,
     pattern: rule.pattern,
@@ -124,8 +119,7 @@ async function addRule(rule: {
     enabled: rule.enabled,
   });
   if (error) throw error;
-  await loadRules();
-  notifyRulesUpdated();
+  await rulesStore.refresh();
 }
 
 async function toggleRule(id: string, enabled: boolean) {
@@ -134,19 +128,13 @@ async function toggleRule(id: string, enabled: boolean) {
     .update({ enabled })
     .eq("id", id);
   if (error) throw error;
-  await loadRules();
-  notifyRulesUpdated();
+  await rulesStore.refresh();
 }
 
 async function deleteRule(id: string) {
   const { error } = await supabase.from("rules").delete().eq("id", id);
   if (error) throw error;
-  await loadRules();
-  notifyRulesUpdated();
-}
-
-function notifyRulesUpdated() {
-  window.dispatchEvent(new CustomEvent("rules:updated"));
+  await rulesStore.refresh();
 }
 
 function applyRulesLocally(rows: Tx[], rules: Rule[]) {
@@ -258,14 +246,8 @@ async function doCommit(changes: ReturnType<typeof applyRulesLocally>) {
       return;
     }
     setFeedback("Mise à jour des catégories...", "info");
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (!token) {
-      setFeedback("Session introuvable. Connectez-vous.", "error");
-      return;
-    }
+    const session = await requireSession();
+    const token = session.access_token;
     const updates = changes.map((change) => ({
       id: change.id,
       category: change.newCategory,
@@ -368,7 +350,7 @@ applyBtn?.addEventListener("click", async () => {
       monthInput?.value || null,
       !!allCheckbox?.checked
     );
-    const changes = applyRulesLocally(rows, state.rules);
+    const changes = applyRulesLocally(rows, currentRules);
     renderPreview(changes);
     setFeedback(
       changes.length ? "Prévisualisation prête." : "Aucun changement proposé.",

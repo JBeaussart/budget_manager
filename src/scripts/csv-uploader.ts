@@ -1,6 +1,7 @@
 import Papa, { type ParseResult } from "papaparse";
 import { normalizeRows } from "../lib/normalizer";
-import { supabase } from "../lib/supabase";
+import { createFeedbackController } from "./utils/feedback";
+import { requireSession } from "./utils/auth";
 
 const fileInput = document.getElementById(
   "csv-file"
@@ -56,6 +57,13 @@ const state: UploaderState = {
   map: createEmptyMap(),
 };
 
+const feedbackCtrl = createFeedbackController(feedback, {
+  baseClass: "mt-4 min-h-[1.25rem] text-sm",
+});
+feedbackCtrl.clear();
+const setFeedback = (msg: string, type: "info" | "success" | "error" = "info") =>
+  feedbackCtrl.set(msg, type);
+
 function createEmptyMap(): ColumnMap {
   return targets.reduce((acc, target) => {
     acc[target] = "";
@@ -65,18 +73,6 @@ function createEmptyMap(): ColumnMap {
 
 function isTargetField(value: string | null): value is TargetField {
   return Boolean(value && targets.includes(value as TargetField));
-}
-
-function setFeedback(msg: string, type: "info" | "success" | "error" = "info") {
-  if (!feedback) return;
-  const color =
-    type === "error"
-      ? "text-rose-600"
-      : type === "success"
-      ? "text-emerald-600"
-      : "text-slate-600";
-  feedback.textContent = msg;
-  feedback.className = `mt-4 min-h-[1.25rem] text-sm ${color}`;
 }
 
 function resetAll() {
@@ -361,17 +357,8 @@ async function doImport() {
     const normalized = normalizeRows(state.rows, map);
 
     setFeedback("Récupération de la session...", "info");
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (!token) {
-      setFeedback(
-        "Session introuvable. Connectez-vous avant d'importer.",
-        "error"
-      );
-      return;
-    }
+    const session = await requireSession();
+    const token = session.access_token;
 
     setFeedback(`Import en cours (${normalized.length} lignes)...`, "info");
     if (btnImport) btnImport.disabled = true;

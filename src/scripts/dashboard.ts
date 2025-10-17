@@ -5,12 +5,10 @@ import {
   sumIncome,
   topCategories,
 } from "../lib/metrics";
-import {
-  applyRuleCategory,
-  fetchRules,
-  type Rule,
-} from "../lib/rules";
+import { applyRuleCategory, type Rule } from "../lib/rules";
 import { supabase } from "../lib/supabase";
+import { rulesStore } from "./stores/rules-store";
+import { createFeedbackController } from "./utils/feedback";
 
 type Tx = {
   occurred_at: string;
@@ -49,6 +47,13 @@ const filterMonth = document.getElementById(
 let pieChart: any = null;
 let barChart: any = null;
 
+const feedbackCtrl = createFeedbackController(feedback, {
+  baseClass: "mt-6 min-h-[1.25rem] text-sm",
+});
+feedbackCtrl.clear();
+const setFeedback = (msg: string, type: "info" | "success" | "error" = "info") =>
+  feedbackCtrl.set(msg, type);
+
 const monthsFull = [
   "Janvier",
   "Février",
@@ -73,6 +78,11 @@ const state = {
   rules: [] as Rule[],
 };
 
+rulesStore.subscribe((rules) => {
+  state.rules = rules;
+  updateCardsAndPie();
+});
+
 function fmt(n: number) {
   const sign = n < 0 ? "-" : "";
   const abs = Math.abs(n);
@@ -81,18 +91,6 @@ function fmt(n: number) {
 
 function monthKey(year: number, month: number) {
   return `${year}-${String(month).padStart(2, "0")}`;
-}
-
-function setFeedback(msg: string, type: "info" | "success" | "error" = "info") {
-  if (!feedback) return;
-  const color =
-    type === "error"
-      ? "text-rose-600"
-      : type === "success"
-      ? "text-emerald-600"
-      : "text-slate-600";
-  feedback.textContent = msg;
-  feedback.className = `mt-6 min-h-[1.25rem] text-sm ${color}`;
 }
 
 function populateYearMonthSelectors() {
@@ -280,16 +278,6 @@ async function loadYear(year: number) {
   updateCardsAndPie();
 }
 
-async function loadRulesState() {
-  try {
-    const rules = await fetchRules();
-    state.rules = rules;
-    updateCardsAndPie();
-  } catch (err) {
-    console.error(err);
-  }
-}
-
 function bindFilters() {
   if (!filterYear || !filterMonth) return;
   filterYear.addEventListener("change", async () => {
@@ -312,7 +300,7 @@ async function init() {
   try {
     populateYearMonthSelectors();
     await loadYear(state.year);
-    await loadRulesState();
+    await rulesStore.ensure();
     bindFilters();
   } catch (err) {
     console.error(err);
@@ -324,9 +312,5 @@ async function init() {
 }
 
 init();
-
-window.addEventListener("rules:updated", () => {
-  loadRulesState();
-});
 
 export {};

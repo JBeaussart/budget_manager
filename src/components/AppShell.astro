@@ -1,0 +1,80 @@
+---
+interface NavLink {
+  href: string;
+  label: string;
+  key: ActiveRoute;
+}
+
+type ActiveRoute = "dashboard" | "transactions" | "import" | "rules";
+
+interface Props {
+  title: string;
+  subtitle?: string;
+  active?: ActiveRoute | null;
+  /**
+   * Optional override for the content section classes.
+   * Defaults to "mx-auto max-w-6xl px-6 py-10".
+   */
+  contentClass?: string;
+}
+
+const { title, subtitle, active = null, contentClass } = Astro.props as Props;
+const hasActions = Astro.slots.has("actions");
+
+const links: NavLink[] = [
+  { href: "/app/dashboard", label: "Dashboard", key: "dashboard" },
+  { href: "/app/transactions", label: "Transactions", key: "transactions" },
+  { href: "/app/import", label: "Importer", key: "import" },
+  { href: "/app/rules", label: "Règles", key: "rules" },
+];
+---
+
+<main class="min-h-screen bg-slate-50">
+  <header class="border-b border-slate-200 bg-white/80 backdrop-blur">
+    <div class="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-4 md:flex-row md:items-center md:justify-between">
+      <div class="space-y-1">
+        <p class="text-sm uppercase tracking-wide text-emerald-500">Mon Budget</p>
+        <h1 class="text-2xl font-semibold text-slate-900">{title}</h1>
+        {subtitle ? <p class="text-sm text-slate-600">{subtitle}</p> : null}
+      </div>
+
+      <nav class="flex flex-wrap items-center gap-2 text-sm font-medium text-slate-600">
+        {
+          links.map((link) => {
+            const isActive = link.key === active;
+            const base =
+              "rounded-lg px-3 py-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500";
+            const activeClasses =
+              "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200";
+            const inactiveClasses =
+              "hover:bg-emerald-50 hover:text-emerald-600";
+            return (
+              <a
+                href={link.href}
+                class={`${base} ${isActive ? activeClasses : inactiveClasses}`}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {link.label}
+              </a>
+            );
+          })
+        }
+        <a
+          href="/logout"
+          class="rounded-lg px-3 py-2 text-rose-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500"
+        >
+          Déconnexion
+        </a>
+      </nav>
+      {hasActions ? (
+        <div class="text-sm text-slate-600 md:ml-auto md:text-right">
+          <slot name="actions" />
+        </div>
+      ) : null}
+    </div>
+  </header>
+
+  <section class={contentClass ?? "mx-auto max-w-6xl px-6 py-10"}>
+    <slot />
+  </section>
+</main>

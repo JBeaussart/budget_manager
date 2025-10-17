@@ -40,16 +40,23 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     let updated = 0;
-    for (const { ids, category } of grouped.values()) {
-      const { data, error } = await supabase
-        .from("transactions")
-        .update({ category })
-        .in("id", ids)
-        .select("id");
-      if (error) {
-        return new Response(error.message, { status: 400 });
-      }
-      updated += data?.length ?? 0;
+    try {
+      const results = await Promise.all(
+        Array.from(grouped.values()).map(async ({ ids, category }) => {
+          const { data, error } = await supabase
+            .from("transactions")
+            .update({ category })
+            .in("id", ids)
+            .select("id");
+          if (error) throw error;
+          return data?.length ?? 0;
+        })
+      );
+      updated = results.reduce((acc, count) => acc + count, 0);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to update categories";
+      return new Response(message, { status: 400 });
     }
 
     return new Response(JSON.stringify({ updated }), {

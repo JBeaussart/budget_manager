@@ -22,20 +22,36 @@ export async function fetchRules(): Promise<Rule[]> {
   return data ?? [];
 }
 
+const patternCache = new Map<string, { raw: string; normalized: string }>();
+
+export function clearRulePatternCache() {
+  patternCache.clear();
+}
+
+function normalizedPattern(rule: Rule): string {
+  const cached = patternCache.get(rule.id);
+  if (cached && cached.raw === rule.pattern) {
+    return cached.normalized;
+  }
+  const normalized = normalize(rule.pattern);
+  patternCache.set(rule.id, { raw: rule.pattern, normalized });
+  return normalized;
+}
+
 export function applyRuleCategory<Row extends Categorizable>(
   row: Row,
   rules: Rule[]
 ): string | "" {
+  if (!rules.length) return "";
+  const normalizedFields: Record<keyof Categorizable, string> = {
+    description: normalize(row.description),
+    counterparty: normalize(row.counterparty),
+  };
+  const fieldValues = Object.values(normalizedFields);
   for (const rule of rules) {
-    const pattern = normalize(rule.pattern);
+    const pattern = normalizedPattern(rule);
     if (!pattern) continue;
-    const fields: Array<"description" | "counterparty"> = [
-      "description",
-      "counterparty",
-    ];
-    const matched = fields.some((field) =>
-      normalize((row as any)[field]).includes(pattern)
-    );
+    const matched = fieldValues.some((value) => value.includes(pattern));
     if (matched) {
       return rule.category;
     }
@@ -44,5 +60,8 @@ export function applyRuleCategory<Row extends Categorizable>(
 }
 
 export function normalize(value: unknown): string {
-  return String(value ?? "").toLowerCase();
+  return String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "");
 }

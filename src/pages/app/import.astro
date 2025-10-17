@@ -1,31 +1,17 @@
 ---
-import Layout from '../../layouts/Layout.astro'
-import CsvUploader from '../../components/CsvUploader.astro'
+import Layout from '../../layouts/Layout.astro';
+import AppShell from '../../components/AppShell.astro';
+import CsvUploader from '../../components/CsvUploader.astro';
 
 export const prerender = false
 ---
 
 <Layout>
-  <main class="min-h-screen bg-slate-50">
-    <header class="border-b border-slate-200 bg-white/80 backdrop-blur">
-      <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <div class="space-y-1">
-          <p class="text-sm uppercase tracking-wide text-emerald-500">Mon Budget</p>
-          <h1 class="text-2xl font-semibold text-slate-900">Importer des transactions</h1>
-          <p class="text-sm text-slate-600">Préparez votre fichier CSV avant l'ingestion.</p>
-        </div>
-        <nav class="flex items-center gap-3 text-sm font-medium text-slate-600">
-          <a href="/app/dashboard" class="rounded-lg px-3 py-2 transition hover:bg-emerald-50 hover:text-emerald-600">Dashboard</a>
-          <a href="/app/transactions" class="rounded-lg px-3 py-2 transition hover:bg-emerald-50 hover:text-emerald-600">Transactions</a>
-          <a href="/app/import" class="rounded-lg bg-emerald-50 px-3 py-2 text-emerald-600 ring-1 ring-emerald-200">Importer</a>
-          <a href="/app/rules" class="rounded-lg px-3 py-2 transition hover:bg-emerald-50 hover:text-emerald-600">Règles</a>
-          <a href="/logout" class="rounded-lg px-3 py-2 text-rose-500 transition hover:bg-rose-50 hover:text-rose-600">Déconnexion</a>
-        </nav>
-      </div>
-    </header>
-
-    <section class="mx-auto max-w-6xl px-6 py-10">
-      <CsvUploader />
-    </section>
-  </main>
+  <AppShell
+    title="Importer des transactions"
+    subtitle="Préparez votre fichier CSV avant l'ingestion."
+    active="import"
+  >
+    <CsvUploader />
+  </AppShell>
 </Layout>

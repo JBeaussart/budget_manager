@@ -1,5 +1,8 @@
-import { applyRuleCategory, fetchRules, type Rule } from "../lib/rules";
+import { applyRuleCategory, type Rule } from "../lib/rules";
 import { supabase } from "../lib/supabase";
+import { rulesStore } from "./stores/rules-store";
+import { createFeedbackController } from "./utils/feedback";
+import { requireUser } from "./utils/auth";
 
 type Tx = {
   id: string;
@@ -43,35 +46,30 @@ const listTop = document.getElementById("tx-list-top") as HTMLElement | null;
 const PAGE_SIZE = 40;
 let page = 0;
 let total = 0;
-let rulesLoaded = false;
+let syncingRules = false;
 let rules: Rule[] = [];
 
-async function refreshRules() {
+const feedbackCtrl = createFeedbackController(feedback, {
+  baseClass: "mt-4 min-h-[1.25rem] text-sm",
+});
+feedbackCtrl.clear();
+const setFeedback = (msg: string, type: "info" | "success" | "error" = "info") =>
+  feedbackCtrl.set(msg, type);
+
+rulesStore.subscribe((nextRules) => {
+  rules = nextRules;
+});
+
+async function syncRules() {
+  if (syncingRules) return;
+  syncingRules = true;
   try {
-    const fetched = await fetchRules();
-    rules = fetched;
-    rulesLoaded = true;
+    rules = await rulesStore.ensure();
   } catch (err) {
     console.error(err);
+  } finally {
+    syncingRules = false;
   }
-}
-
-async function ensureRules() {
-  if (!rulesLoaded) {
-    await refreshRules();
-  }
-}
-
-function setFeedback(msg: string, type: "info" | "success" | "error" = "info") {
-  if (!feedback) return;
-  const color =
-    type === "error"
-      ? "text-rose-600"
-      : type === "success"
-      ? "text-emerald-600"
-      : "text-slate-600";
-  feedback.textContent = msg;
-  feedback.className = `mt-4 min-h-[1.25rem] text-sm ${color}`;
 }
 
 function setStats(loaded: number) {
@@ -113,7 +111,7 @@ function rangeStartEnd() {
 
 async function fetchPage(opts: { append?: boolean } = {}) {
   if (!tbody) return;
-  await ensureRules();
+  await syncRules();
   const [start, end] = rangeStartEnd();
   const category = (catSelect?.value || "").trim();
   const search = (searchInput?.value || "").trim();
@@ -431,7 +429,9 @@ function renderPagination() {
 applyFilters(true);
 
 window.addEventListener("rules:updated", () => {
-  rulesLoaded = false;
+  if (!tbody) return;
+  if (syncingRules) return;
+  rules = rulesStore.get();
   fetchPage({ append: false });
 });
 
@@ -444,10 +444,8 @@ deleteAllBtn?.addEventListener("click", async () => {
   try {
     setFeedback("Suppression de toutes les transactions...");
     deleteAllBtn.disabled = true;
-    const { data: userRes, error: userErr } = await supabase.auth.getUser();
-    if (userErr || !userRes?.user)
-      throw userErr || new Error("Utilisateur introuvable");
-    const userId = userRes.user.id;
+    const user = await requireUser();
+    const userId = user.id;
     const { error: delErr } = await supabase
       .from("transactions")
       .delete()
