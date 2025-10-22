@@ -12,6 +12,7 @@ type Tx = {
   category?: string | null;
 };
 
+if (typeof window !== "undefined") {
 const form = document.getElementById("rule-form") as HTMLFormElement | null;
 const inputPattern = document.getElementById(
   "rule-pattern"
@@ -377,5 +378,6 @@ applyBtn?.addEventListener("click", async () => {
   if (monthInput) monthInput.value = `${y}-${m}`;
   loadRules();
 })();
+}
 
 export {};
