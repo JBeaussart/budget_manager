@@ -75,36 +75,36 @@ function categoryColors(n: number): string[] {
 }
 
 if (typeof window !== "undefined") {
-  const cardIncome = document.getElementById("card-income") as
-    | HTMLElement
-    | null;
-  const cardExpenses = document.getElementById(
-    "card-expenses"
+  const cardIncome = document.getElementById(
+    "card-income",
   ) as HTMLElement | null;
-  const cardSaving = document.getElementById("card-saving") as
-    | HTMLElement
-    | null;
+  const cardExpenses = document.getElementById(
+    "card-expenses",
+  ) as HTMLElement | null;
+  const cardSaving = document.getElementById(
+    "card-saving",
+  ) as HTMLElement | null;
   const cardIncomeAvg = document.getElementById(
-    "card-income-avg"
+    "card-income-avg",
   ) as HTMLElement | null;
   const cardExpensesAvg = document.getElementById(
-    "card-expenses-avg"
+    "card-expenses-avg",
   ) as HTMLElement | null;
   const pieMonthLabel = document.getElementById(
-    "pie-month-label"
+    "pie-month-label",
   ) as HTMLElement | null;
   const barRangeLabel = document.getElementById(
-    "bar-range-label"
+    "bar-range-label",
   ) as HTMLElement | null;
   const feedback = document.getElementById(
-    "dash-feedback"
+    "dash-feedback",
   ) as HTMLElement | null;
 
   const filterYear = document.getElementById(
-    "filter-year"
+    "filter-year",
   ) as HTMLSelectElement | null;
   const filterMonth = document.getElementById(
-    "filter-month"
+    "filter-month",
   ) as HTMLSelectElement | null;
 
   let pieChart: any = null;
@@ -116,13 +116,13 @@ if (typeof window !== "undefined") {
   feedbackCtrl.clear();
   const setFeedback = (
     msg: string,
-    type: "info" | "success" | "error" = "info"
+    type: "info" | "success" | "error" = "info",
   ) => feedbackCtrl.set(msg, type);
 
   const state = {
     year: new Date().getFullYear(),
     month: new Date().getMonth() + 1, // 1..12
-    allMonths: false,
+    allMonths: true,
     rows: [] as Tx[],
     byMonth: {} as Record<string, Tx[]>,
     rules: [] as Rule[],
@@ -139,17 +139,17 @@ if (typeof window !== "undefined") {
     filterYear.value = String(state.year);
     const monthOptions = [`<option value="all">Année complète</option>`];
     monthOptions.push(
-      ...monthsFull.map((m, i) => `<option value="${i + 1}">${m}</option>`)
+      ...monthsFull.map((m, i) => `<option value="${i + 1}">${m}</option>`),
     );
     filterMonth.innerHTML = monthOptions.join("");
-    filterMonth.value = String(state.month);
+    filterMonth.value = state.allMonths ? "all" : String(state.month);
   }
 
   function updateCardsAndPie() {
     const key = monthKey(state.year, state.month);
     const curRows = state.allMonths ? state.rows : state.byMonth[key] || [];
     const activeRules = state.rules.filter(
-      (rule) => rule.enabled && rule.pattern && rule.category
+      (rule) => rule.enabled && rule.pattern && rule.category,
     );
     const rowsWithRules = activeRules.length
       ? curRows.map((row) => ({
@@ -193,7 +193,7 @@ if (typeof window !== "undefined") {
     const colors = categoryColors(labels.length);
 
     const pieCanvas = document.getElementById(
-      "chart-categories"
+      "chart-categories",
     ) as HTMLCanvasElement | null;
     // @ts-ignore
     const ChartLib = (window as any).Chart;
@@ -233,18 +233,18 @@ if (typeof window !== "undefined") {
   function updateBar() {
     const labels = monthsFull.slice();
     const keys = Array.from({ length: 12 }, (_, i) =>
-      monthKey(state.year, i + 1)
+      monthKey(state.year, i + 1),
     );
     const barIncome = keys.map((k) =>
-      sumIncome((state.byMonth[k] || []) as any)
+      sumIncome((state.byMonth[k] || []) as any),
     );
     const barExpense = keys.map((k) =>
-      sumExpenses((state.byMonth[k] || []) as any)
+      sumExpenses((state.byMonth[k] || []) as any),
     );
     if (barRangeLabel) barRangeLabel.textContent = String(state.year);
 
     const barCanvas = document.getElementById(
-      "chart-months"
+      "chart-months",
     ) as HTMLCanvasElement | null;
     // @ts-ignore
     const ChartLib = (window as any).Chart;
@@ -315,7 +315,7 @@ if (typeof window !== "undefined") {
       console.error(err);
       setFeedback(
         err instanceof Error ? err.message : "Erreur lors du chargement.",
-        "error"
+        "error",
       );
     }
   }
