@@ -12,7 +12,7 @@ const cfg = readSupabaseConfig();
 
 if (!cfg.url || !cfg.anonKey) {
   console.error(
-    "Configuration Supabase manquante : vérifiez PUBLIC_SUPABASE_URL et PUBLIC_SUPABASE_ANON_KEY."
+    "Configuration Supabase manquante : vérifiez PUBLIC_SUPABASE_URL et PUBLIC_SUPABASE_ANON_KEY.",
   );
 }
 
@@ -144,8 +144,8 @@ function showMessage(key, message, type = "info") {
     type === "error"
       ? "text-rose-600"
       : type === "success"
-      ? "text-emerald-600"
-      : "text-slate-600";
+        ? "text-emerald-600"
+        : "text-slate-600";
   el.textContent = message;
   el.className = `${base} ${color}`;
 }
@@ -177,7 +177,7 @@ async function persistSessionCookies(session) {
   if (!response.ok) {
     const details = await response.text();
     throw new Error(
-      `Impossible de synchroniser la session (${response.status}): ${details}`
+      `Impossible de synchroniser la session (${response.status}): ${details}`,
     );
   }
 }
@@ -186,7 +186,7 @@ function redirectAfterAuth(message = "Redirection...") {
   showMessage("login", message, "success");
   showMessage("signup", message, "success");
   closeAll();
-  window.location.href = "/app";
+  window.location.href = "/app/dashboard";
 }
 
 const loginForm = forms.login;
@@ -246,7 +246,7 @@ if (signupForm) {
         showMessage(
           "signup",
           "Compte créé ! Vérifiez votre boîte mail pour confirmer.",
-          "success"
+          "success",
         );
         return;
       }
