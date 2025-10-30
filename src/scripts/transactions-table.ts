@@ -1,4 +1,8 @@
-import { applyRuleCategory, type Rule } from "../lib/rules";
+import {
+  applyRuleBudgetCategory,
+  applyRuleCategory,
+  type Rule,
+} from "../lib/rules";
 import { supabase } from "../lib/supabase";
 import { rulesStore } from "./stores/rules-store";
 import { createFeedbackController } from "./utils/feedback";
@@ -12,31 +16,58 @@ type Tx = {
   description?: string;
   counterparty?: string;
   category?: string;
+  budget_category?: string | null;
 };
 
+const BUDGET_CATEGORY_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "", label: "Non défini" },
+  { value: "obligatoire fixe", label: "Obligatoire fixe" },
+  { value: "obligatoire variable", label: "Obligatoire variable" },
+  { value: "plaisir", label: "Plaisir" },
+];
+
+const BUDGET_ROW_CLASS_MAP: Record<string, string> = {
+  "obligatoire fixe": "bg-sky-100",
+  "obligatoire variable": "bg-amber-100",
+  plaisir: "bg-rose-100",
+};
+const BUDGET_ROW_CLASS_VALUES = Object.values(BUDGET_ROW_CLASS_MAP);
+
+function applyBudgetHighlight(element: HTMLElement, budget: string | null | undefined) {
+  if (!element) return;
+  if (BUDGET_ROW_CLASS_VALUES.length) {
+    element.classList.remove(...BUDGET_ROW_CLASS_VALUES);
+  }
+  if (!budget) return;
+  const cls = BUDGET_ROW_CLASS_MAP[budget];
+  if (cls) {
+    element.classList.add(cls);
+  }
+}
+
 const startInput = document.getElementById(
-  "tx-filter-start"
+  "tx-filter-start",
 ) as HTMLInputElement | null;
 const endInput = document.getElementById(
-  "tx-filter-end"
+  "tx-filter-end",
 ) as HTMLInputElement | null;
 const catSelect = document.getElementById(
-  "tx-filter-category"
+  "tx-filter-category",
 ) as HTMLSelectElement | null;
 const searchInput = document.getElementById(
-  "tx-filter-search"
+  "tx-filter-search",
 ) as HTMLInputElement | null;
 const applyBtn = document.getElementById(
-  "tx-apply"
+  "tx-apply",
 ) as HTMLButtonElement | null;
 const resetBtn = document.getElementById(
-  "tx-reset"
+  "tx-reset",
 ) as HTMLButtonElement | null;
 const pagination = document.getElementById(
-  "tx-pagination"
+  "tx-pagination",
 ) as HTMLElement | null;
 const deleteAllBtn = document.getElementById(
-  "tx-delete-all"
+  "tx-delete-all",
 ) as HTMLButtonElement | null;
 const tbody = document.getElementById("tx-body") as HTMLElement | null;
 const stats = document.getElementById("tx-stats") as HTMLElement | null;
@@ -53,8 +84,10 @@ const feedbackCtrl = createFeedbackController(feedback, {
   baseClass: "mt-4 min-h-[1.25rem] text-sm",
 });
 feedbackCtrl.clear();
-const setFeedback = (msg: string, type: "info" | "success" | "error" = "info") =>
-  feedbackCtrl.set(msg, type);
+const setFeedback = (
+  msg: string,
+  type: "info" | "success" | "error" = "info",
+) => feedbackCtrl.set(msg, type);
 
 rulesStore.subscribe((nextRules) => {
   rules = nextRules;
@@ -78,8 +111,8 @@ function setStats(loaded: number) {
     total > 0
       ? `${loaded} / ${total} lignes`
       : loaded > 0
-      ? `${loaded} lignes`
-      : "Aucune donnée.";
+        ? `${loaded} lignes`
+        : "Aucune donnée.";
 }
 
 function scrollToListTop() {
@@ -159,8 +192,11 @@ async function fetchPage(opts: { append?: boolean } = {}) {
   const loadedBefore = tbody.querySelectorAll("tr").length;
   const loadedAfter = loadedBefore + (data?.length || 0);
 
-  const activeRules = rules.filter(
-    (rule) => rule.enabled && rule.pattern && rule.category
+  const categoryRules = rules.filter(
+    (rule) => rule.enabled && rule.pattern && rule.category,
+  );
+  const budgetRules = rules.filter(
+    (rule) => rule.enabled && rule.pattern && rule.budget_category,
   );
 
   // Known categories from filter select, current page, and rules
@@ -174,8 +210,10 @@ async function fetchPage(opts: { append?: boolean } = {}) {
   for (const r of (data || []) as Tx[]) {
     if (r.category) categoriesSet.add(r.category);
   }
-  for (const rule of activeRules) {
-    categoriesSet.add(rule.category);
+  for (const rule of categoryRules) {
+    if (rule.category) {
+      categoriesSet.add(rule.category);
+    }
   }
 
   for (const row of (data || []) as Tx[]) {
@@ -186,18 +224,22 @@ async function fetchPage(opts: { append?: boolean } = {}) {
       <td class="px-3 py-2 text-slate-700">${row.description ?? ""}</td>
       <td class="px-3 py-2 text-slate-700">${row.counterparty ?? ""}</td>
       <td class="px-3 py-2 text-slate-700"></td>
-      <td class="px-3 py-2 text-right font-medium ${amountClass}">${formatAmount(
-      row.amount
-    )}</td>
+      <td class="px-3 py-2 text-slate-700"></td>
+      <td class="px-3 py-2 text-right font-medium ${amountClass} min-w-[7rem]">${formatAmount(
+        row.amount,
+      )}</td>
       <td class="px-3 py-2 text-right"></td>
     `;
     const catTd = tr.children[3] as HTMLTableCellElement;
-    const actionsTd = tr.children[5] as HTMLTableCellElement;
+    const budgetTd = tr.children[4] as HTMLTableCellElement;
+    const actionsTd = tr.children[6] as HTMLTableCellElement;
 
-    const overlay =
-      activeRules.length > 0 ? applyRuleCategory(row, activeRules) : "";
+    const overlay = categoryRules.length
+      ? applyRuleCategory(row, categoryRules)
+      : "";
     if (overlay) {
       catTd.textContent = overlay;
+      row.category = overlay;
     } else {
       // Build select for category (persisted DB value)
       const select = document.createElement("select");
@@ -207,7 +249,7 @@ async function fetchPage(opts: { append?: boolean } = {}) {
         { value: "", label: "Non catégorisé" },
       ];
       const sorted = Array.from(categoriesSet).sort((a, b) =>
-        a.localeCompare(b)
+        a.localeCompare(b),
       );
       for (const c of sorted) opts.push({ value: c, label: c });
       if (row.category && !categoriesSet.has(row.category)) {
@@ -252,7 +294,7 @@ async function fetchPage(opts: { append?: boolean } = {}) {
           console.error(err);
           setFeedback(
             err?.message || "Impossible de mettre à jour la catégorie.",
-            "error"
+            "error",
           );
           select.value = prev;
         } finally {
@@ -261,6 +303,71 @@ async function fetchPage(opts: { append?: boolean } = {}) {
       });
 
       catTd.appendChild(select);
+    }
+
+    const budgetOverlay = budgetRules.length
+      ? applyRuleBudgetCategory(row, budgetRules)
+      : "";
+    if (budgetOverlay) {
+      const option =
+        BUDGET_CATEGORY_OPTIONS.find((item) => item.value === budgetOverlay) ??
+        null;
+      budgetTd.textContent = option ? option.label : budgetOverlay;
+      row.budget_category = budgetOverlay;
+      applyBudgetHighlight(tr, row.budget_category);
+    } else {
+      // Budget category select
+      const budgetSelect = document.createElement("select");
+      budgetSelect.className =
+        "max-w-56 rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900";
+      for (const option of BUDGET_CATEGORY_OPTIONS) {
+        const opt = document.createElement("option");
+        opt.value = option.value;
+        opt.textContent = option.label;
+        budgetSelect.appendChild(opt);
+      }
+      if (
+        row.budget_category &&
+        !BUDGET_CATEGORY_OPTIONS.some(
+          (option) => option.value === row.budget_category,
+        )
+      ) {
+        const opt = document.createElement("option");
+        opt.value = row.budget_category;
+        opt.textContent = row.budget_category;
+        budgetSelect.appendChild(opt);
+      }
+      budgetSelect.value = row.budget_category || "";
+      applyBudgetHighlight(tr, row.budget_category);
+      budgetSelect.addEventListener("change", async () => {
+        const prev = row.budget_category || "";
+        const next = budgetSelect.value;
+        if (prev === next) return;
+        try {
+          setFeedback("Mise à jour du budget...");
+          budgetSelect.disabled = true;
+          const payload: any = { budget_category: next || null };
+          const { error: upErr } = await supabase
+            .from("transactions")
+            .update(payload)
+            .eq("id", row.id);
+          if (upErr) throw upErr;
+          row.budget_category = next || "";
+          setFeedback("");
+          applyBudgetHighlight(tr, row.budget_category);
+        } catch (err: any) {
+          console.error(err);
+          setFeedback(
+            err?.message || "Impossible de mettre à jour le budget.",
+            "error",
+          );
+          budgetSelect.value = prev;
+          applyBudgetHighlight(tr, prev);
+        } finally {
+          budgetSelect.disabled = false;
+        }
+      });
+      budgetTd.appendChild(budgetSelect);
     }
 
     // Delete button in actions column
@@ -348,7 +455,7 @@ function renderPagination() {
 
   const mkBtn = (
     label: string,
-    opts: { disabled?: boolean; active?: boolean; onClick?: () => void } = {}
+    opts: { disabled?: boolean; active?: boolean; onClick?: () => void } = {},
   ) => {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -381,7 +488,7 @@ function renderPagination() {
         scrollToListTop();
         fetchPage({ append: false });
       },
-    })
+    }),
   );
 
   // Numeric buttons with windowing
@@ -407,7 +514,7 @@ function renderPagination() {
           scrollToListTop();
           fetchPage({ append: false });
         },
-      })
+      }),
     );
   }
 
@@ -421,7 +528,7 @@ function renderPagination() {
         scrollToListTop();
         fetchPage({ append: false });
       },
-    })
+    }),
   );
 }
 
@@ -438,7 +545,7 @@ window.addEventListener("rules:updated", () => {
 // Delete all transactions (current user)
 deleteAllBtn?.addEventListener("click", async () => {
   const ok = window.confirm(
-    "Supprimer TOUTES vos transactions ? Cette action est irréversible."
+    "Supprimer TOUTES vos transactions ? Cette action est irréversible.",
   );
   if (!ok) return;
   try {

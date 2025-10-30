@@ -5,7 +5,11 @@ import {
   sumIncome,
   topCategories,
 } from "../lib/metrics";
-import { applyRuleCategory, type Rule } from "../lib/rules";
+import {
+  applyRuleBudgetCategory,
+  applyRuleCategory,
+  type Rule,
+} from "../lib/rules";
 import { supabase } from "../lib/supabase";
 import { rulesStore } from "./stores/rules-store";
 import { createFeedbackController } from "./utils/feedback";
@@ -16,6 +20,7 @@ type Tx = {
   category?: string;
   description?: string;
   counterparty?: string;
+  budget_category?: string | null;
 };
 
 const monthsFull = [
@@ -33,6 +38,33 @@ const monthsFull = [
   "Décembre",
 ];
 
+const PIE_COLOR_PALETTE = [
+  "#34d399",
+  "#60a5fa",
+  "#f472b6",
+  "#fbbf24",
+  "#fb7185",
+  "#a78bfa",
+  "#f59e0b",
+  "#4ade80",
+  "#22d3ee",
+  "#c084fc",
+];
+const FALLBACK_OTHER_COLOR = "#94a3b8";
+const categoryColorCache = new Map<string, string>();
+let nextColorIndex = 0;
+
+function colorForCategory(label: string): string {
+  const key = label || "Non catégorisé";
+  if (key === "Autres") return FALLBACK_OTHER_COLOR;
+  const cached = categoryColorCache.get(key);
+  if (cached) return cached;
+  const color = PIE_COLOR_PALETTE[nextColorIndex % PIE_COLOR_PALETTE.length];
+  nextColorIndex += 1;
+  categoryColorCache.set(key, color);
+  return color;
+}
+
 function fmt(n: number) {
   const sign = n < 0 ? "-" : "";
   const abs = Math.abs(n);
@@ -48,7 +80,9 @@ async function fetchYear(year: number): Promise<Tx[]> {
   const end = `${year}-12-31`;
   const { data, error } = await supabase
     .from("transactions")
-    .select("occurred_at, amount, category, description, counterparty")
+    .select(
+      "occurred_at, amount, category, description, counterparty, budget_category",
+    )
     .gte("occurred_at", start)
     .lte("occurred_at", end)
     .order("occurred_at", { ascending: true })
@@ -56,24 +90,6 @@ async function fetchYear(year: number): Promise<Tx[]> {
   if (error) throw error;
   return (data || []) as Tx[];
 }
-function categoryColors(n: number): string[] {
-  const palette = [
-    "#34d399",
-    "#60a5fa",
-    "#f472b6",
-    "#fbbf24",
-    "#fb7185",
-    "#a78bfa",
-    "#f59e0b",
-    "#4ade80",
-    "#22d3ee",
-    "#c084fc",
-  ];
-  const out: string[] = [];
-  for (let i = 0; i < n; i++) out.push(palette[i % palette.length]);
-  return out;
-}
-
 if (typeof window !== "undefined") {
   const cardIncome = document.getElementById(
     "card-income",
@@ -148,14 +164,27 @@ if (typeof window !== "undefined") {
   function updateCardsAndPie() {
     const key = monthKey(state.year, state.month);
     const curRows = state.allMonths ? state.rows : state.byMonth[key] || [];
-    const activeRules = state.rules.filter(
+    const categoryRules = state.rules.filter(
       (rule) => rule.enabled && rule.pattern && rule.category,
     );
-    const rowsWithRules = activeRules.length
-      ? curRows.map((row) => ({
-          ...row,
-          category: applyRuleCategory(row, activeRules) || row.category,
-        }))
+    const budgetRules = state.rules.filter(
+      (rule) => rule.enabled && rule.pattern && rule.budget_category,
+    );
+    const hasRuleOverlays = categoryRules.length > 0 || budgetRules.length > 0;
+    const rowsWithRules = hasRuleOverlays
+      ? curRows.map((row) => {
+          const overlayCategory = categoryRules.length
+            ? applyRuleCategory(row, categoryRules)
+            : "";
+          const overlayBudget = budgetRules.length
+            ? applyRuleBudgetCategory(row, budgetRules)
+            : "";
+          return {
+            ...row,
+            category: overlayCategory || row.category,
+            budget_category: overlayBudget || row.budget_category,
+          };
+        })
       : curRows;
     const inc = sumIncome(curRows as any);
     const exp = sumExpenses(curRows as any);
@@ -190,7 +219,7 @@ if (typeof window !== "undefined") {
       labels.push("Autres");
       data.push(others);
     }
-    const colors = categoryColors(labels.length);
+    const colors = labels.map((label) => colorForCategory(label));
 
     const pieCanvas = document.getElementById(
       "chart-categories",

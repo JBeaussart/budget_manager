@@ -29,6 +29,19 @@ Les prochains chantiers sequentiels (voir `plan.md` pour le detail) :
 - Compte Supabase (projet Postgres provisionne) et acces au SQL editor.
 - (Optionnel) Compte Netlify pour le deploiement serverless.
 
+## Mise à jour du schéma Supabase
+Pour suivre la nouvelle colonne de budget, ajoutez la colonne suivante à la table `transactions` (nullable) :
+
+```sql
+alter table transactions
+  add column if not exists budget_category text;
+
+alter table rules
+  add column if not exists budget_category text;
+```
+
+Les policies RLS existantes restent valables ; aucune mise à jour n'est requise tant que la colonne est accessible en lecture/écriture comme le reste des champs.
+
 ## Demarrage rapide
 ```bash
 # 1. Installer les dependances

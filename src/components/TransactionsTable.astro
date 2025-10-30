@@ -1,63 +1,136 @@
 ---
+
 ---
 
 <section class="space-y-6">
-  <header class="space-y-2">
-    <h2 class="text-xl font-semibold text-slate-900">Transactions</h2>
-    <p class="text-sm text-slate-600">Filtre par mois, catégorie et recherche.</p>
-  </header>
+    <header class="space-y-2">
+        <h2 class="text-xl font-semibold text-slate-900">Transactions</h2>
+        <p class="text-sm text-slate-600">
+            Filtre par mois, catégorie et recherche.
+        </p>
+    </header>
 
-  <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-    <div class="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
-      <div class="flex-1 space-y-1">
-        <label for="tx-filter-start" class="text-xs font-medium text-slate-600">Du</label>
-        <input id="tx-filter-start" type="date" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" />
-      </div>
-      <div class="flex-1 space-y-1">
-        <label for="tx-filter-end" class="text-xs font-medium text-slate-600">Au</label>
-        <input id="tx-filter-end" type="date" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" />
-      </div>
-      <div class="flex-1 space-y-1">
-        <label for="tx-filter-search" class="text-xs font-medium text-slate-600">Recherche</label>
-        <input id="tx-filter-search" type="text" placeholder="description ou contrepartie" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900" />
-      </div>
-      <div class="flex gap-2">
-        <button id="tx-apply" class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600">Filtrer</button>
-        <button id="tx-reset" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">Réinitialiser</button>
-      </div>
-      <div class="flex gap-2 md:ml-auto">
-        <button id="tx-delete-all" class="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-4 w-4">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 7h12M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-9 0l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M10 11v6m4-6v6" />
-          </svg>
-          Supprimer tout
-        </button>
-      </div>
+    <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
+            <div class="flex-1 space-y-1">
+                <label
+                    for="tx-filter-start"
+                    class="text-xs font-medium text-slate-600">Du</label
+                >
+                <input
+                    id="tx-filter-start"
+                    type="date"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                />
+            </div>
+            <div class="flex-1 space-y-1">
+                <label
+                    for="tx-filter-end"
+                    class="text-xs font-medium text-slate-600">Au</label
+                >
+                <input
+                    id="tx-filter-end"
+                    type="date"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                />
+            </div>
+            <div class="flex-1 space-y-1">
+                <label
+                    for="tx-filter-search"
+                    class="text-xs font-medium text-slate-600">Recherche</label
+                >
+                <input
+                    id="tx-filter-search"
+                    type="text"
+                    placeholder="description ou contrepartie"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                />
+            </div>
+            <div class="flex gap-2">
+                <button
+                    id="tx-apply"
+                    class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+                    >Filtrer</button
+                >
+                <button
+                    id="tx-reset"
+                    class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    >Réinitialiser</button
+                >
+            </div>
+            <div class="flex gap-2 md:ml-auto">
+                <button
+                    id="tx-delete-all"
+                    class="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        class="h-4 w-4"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.5"
+                            d="M6 7h12M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m-9 0l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M10 11v6m4-6v6"
+                        ></path>
+                    </svg>
+                    Supprimer tout
+                </button>
+            </div>
+        </div>
+
+        <p id="tx-feedback" class="mt-4 min-h-[1.25rem] text-sm"></p>
+
+        <div
+            id="tx-list-top"
+            class="mt-2 overflow-x-auto rounded-xl border border-slate-200"
+        >
+            <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th
+                            class="px-3 py-2 text-left font-semibold text-slate-700"
+                            >Date</th
+                        >
+                        <th
+                            class="px-3 py-2 text-left font-semibold text-slate-700"
+                            >Description</th
+                        >
+                        <th
+                            class="px-3 py-2 text-left font-semibold text-slate-700"
+                            >Contrepartie</th
+                        >
+                        <th
+                            class="px-3 py-2 text-left font-semibold text-slate-700"
+                            >Catégorie</th
+                        >
+                        <th
+                            class="px-3 py-2 text-left font-semibold text-slate-700"
+                            >Importance</th
+                        >
+                        <th
+                            class="px-3 py-2 text-right font-semibold text-slate-700 min-w-[7rem]"
+                            >Montant</th
+                        >
+                        <th
+                            class="px-3 py-2 text-right font-semibold text-slate-700"
+                            >Actions</th
+                        >
+                    </tr>
+                </thead>
+                <tbody id="tx-body" class="divide-y divide-slate-200 bg-white"
+                ></tbody>
+            </table>
+        </div>
+
+        <div class="mt-4 flex items-center justify-between">
+            <p id="tx-stats" class="text-sm text-slate-600">Aucune donnée.</p>
+            <div id="tx-pagination" class="flex items-center gap-2"></div>
+        </div>
     </div>
-
-    <p id="tx-feedback" class="mt-4 min-h-[1.25rem] text-sm"></p>
-
-    <div id="tx-list-top" class="mt-2 overflow-x-auto rounded-xl border border-slate-200">
-        <table class="min-w-full divide-y divide-slate-200 text-sm">
-          <thead class="bg-slate-50">
-            <tr>
-              <th class="px-3 py-2 text-left font-semibold text-slate-700">Date</th>
-              <th class="px-3 py-2 text-left font-semibold text-slate-700">Description</th>
-              <th class="px-3 py-2 text-left font-semibold text-slate-700">Contrepartie</th>
-              <th class="px-3 py-2 text-left font-semibold text-slate-700">Catégorie</th>
-              <th class="px-3 py-2 text-right font-semibold text-slate-700">Montant</th>
-              <th class="px-3 py-2 text-right font-semibold text-slate-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="tx-body" class="divide-y divide-slate-200 bg-white"></tbody>
-        </table>
-      </div>
-
-    <div class="mt-4 flex items-center justify-between">
-      <p id="tx-stats" class="text-sm text-slate-600">Aucune donnée.</p>
-      <div id="tx-pagination" class="flex items-center gap-2"></div>
-    </div>
-  </div>
 </section>
 
 <script type="module" src="/src/scripts/transactions-table.ts"></script>

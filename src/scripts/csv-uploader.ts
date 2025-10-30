@@ -4,29 +4,29 @@ import { createFeedbackController } from "./utils/feedback";
 import { requireSession } from "./utils/auth";
 
 const fileInput = document.getElementById(
-  "csv-file"
+  "csv-file",
 ) as HTMLInputElement | null;
 
 const fileInfo = document.getElementById("csv-file-info") as HTMLElement | null;
 const btnPreview = document.getElementById(
-  "btn-preview"
+  "btn-preview",
 ) as HTMLButtonElement | null;
 const btnReset = document.getElementById(
-  "btn-reset"
+  "btn-reset",
 ) as HTMLButtonElement | null;
 const btnImport = document.getElementById(
-  "btn-import"
+  "btn-import",
 ) as HTMLButtonElement | null;
 const mappingEl = document.getElementById("mapping") as HTMLElement | null;
 const delimiterInfo = document.getElementById(
-  "delimiter-info"
+  "delimiter-info",
 ) as HTMLElement | null;
 const previewEl = document.getElementById("preview") as HTMLElement | null;
 const previewBody = document.getElementById(
-  "preview-body"
+  "preview-body",
 ) as HTMLElement | null;
 const feedback = document.getElementById(
-  "uploader-feedback"
+  "uploader-feedback",
 ) as HTMLElement | null;
 
 const targets = [
@@ -34,6 +34,7 @@ const targets = [
   "amount",
   "description",
   "counterparty",
+  "budget_category",
   "type",
 ] as const;
 
@@ -61,8 +62,10 @@ const feedbackCtrl = createFeedbackController(feedback, {
   baseClass: "mt-4 min-h-[1.25rem] text-sm",
 });
 feedbackCtrl.clear();
-const setFeedback = (msg: string, type: "info" | "success" | "error" = "info") =>
-  feedbackCtrl.set(msg, type);
+const setFeedback = (
+  msg: string,
+  type: "info" | "success" | "error" = "info",
+) => feedbackCtrl.set(msg, type);
 
 function createEmptyMap(): ColumnMap {
   return targets.reduce((acc, target) => {
@@ -104,7 +107,7 @@ function guessMapping(fields: string[]): Partial<ColumnMap> {
 
   const findAny = (...candidates: string[]) => {
     const idx = lower.findIndex(({ l }) =>
-      candidates.some((c) => l.includes(c))
+      candidates.some((c) => l.includes(c)),
     );
     return idx >= 0 ? lower[idx].raw : "";
   };
@@ -147,6 +150,17 @@ function guessMapping(fields: string[]): Partial<ColumnMap> {
       ({ l }) => l.includes("merchant") || l.includes("fournisseur"),
     ]) || "";
 
+  const budgetCategory =
+    findFirst([
+      ({ l }) =>
+        l.includes("budget") &&
+        (l.includes("type") ||
+          l.includes("cat") ||
+          l.includes("classe") ||
+          l.includes("bucket")),
+      ({ l }) => l.includes("obligatoire") || l.includes("plaisir"),
+    ]) || "";
+
   const type = findAny(
     "type operation",
     "type d'opération",
@@ -154,15 +168,15 @@ function guessMapping(fields: string[]): Partial<ColumnMap> {
     "sens",
     "debit/credit",
     "dr/cr",
-    "nature"
+    "nature",
   );
 
-  return { date, amount, description, counterparty, type };
+  return { date, amount, description, counterparty, budget_category, type };
 }
 
 function populateMapping(fields: string[]) {
   const selects = Array.from(
-    document.querySelectorAll<HTMLSelectElement>("[data-map-target]")
+    document.querySelectorAll<HTMLSelectElement>("[data-map-target]"),
   );
   const options = ["— (ignorer)", ...fields];
   const guessed = guessMapping(fields);
@@ -204,11 +218,11 @@ function enforceUniqueForDescriptionAndCounterparty(changedKey?: TargetField) {
     const toClear: TargetField = changedKey === descKey ? cpKey : descKey;
     state.map[toClear] = "";
     const el = document.querySelector<HTMLSelectElement>(
-      `select[data-map-target="${toClear}"]`
+      `select[data-map-target="${toClear}"]`,
     );
     if (el) el.value = "";
     setFeedback(
-      "Le même champ ne peut pas être utilisé pour description et contrepartie. Un des deux a été réinitialisé."
+      "Le même champ ne peut pas être utilisé pour description et contrepartie. Un des deux a été réinitialisé.",
     );
   }
 }
@@ -220,7 +234,7 @@ function findField(includes: string | string[]) {
     l: String(f).toLowerCase(),
   }));
   const hit = lowered.find(({ l }: { l: string }) =>
-    incs.some((s) => l.includes(s))
+    incs.some((s) => l.includes(s)),
   );
   return hit?.raw || "";
 }
@@ -253,12 +267,13 @@ function renderPreview() {
     }
 
     const cols = [
-      state.map.date ? row[state.map.date] ?? "" : "",
+      state.map.date ? (row[state.map.date] ?? "") : "",
       amountCell,
-      state.map.description ? row[state.map.description] ?? "" : "",
-      state.map.counterparty ? row[state.map.counterparty] ?? "" : "",
+      state.map.description ? (row[state.map.description] ?? "") : "",
+      state.map.counterparty ? (row[state.map.counterparty] ?? "") : "",
+      state.map.budget_category ? (row[state.map.budget_category] ?? "") : "",
       "EUR",
-      state.map.type ? row[state.map.type] ?? "" : "",
+      state.map.type ? (row[state.map.type] ?? "") : "",
     ];
     for (const c of cols) {
       const td = document.createElement("td");
@@ -294,7 +309,7 @@ fileInput?.addEventListener("change", async () => {
     state.file = file;
     if (fileInfo)
       fileInfo.textContent = `${file.name} • ${(file.size / 1024).toFixed(
-        1
+        1,
       )} Ko`;
 
     const result = await parseFile(file);
@@ -319,7 +334,7 @@ fileInput?.addEventListener("change", async () => {
     console.error(err);
     setFeedback(
       "Impossible d'analyser le fichier. Vérifiez le format CSV.",
-      "error"
+      "error",
     );
     mappingEl?.classList.add("hidden");
     previewEl?.classList.add("hidden");
@@ -352,6 +367,7 @@ async function doImport() {
       amount: state.map.amount,
       description: state.map.description,
       counterparty: state.map.counterparty,
+      budget_category: state.map.budget_category,
       type: state.map.type,
     };
     const normalized = normalizeRows(state.rows, map);
@@ -381,7 +397,7 @@ async function doImport() {
 
     setFeedback(
       `Import terminé: ${normalized.length} ligne(s) envoyée(s).`,
-      "success"
+      "success",
     );
   } catch (err) {
     console.error(err);

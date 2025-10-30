@@ -4,7 +4,8 @@ export type Rule = {
   id: string;
   pattern: string;
   field?: never;
-  category: string;
+  category?: string | null;
+  budget_category?: string | null;
   enabled: boolean;
 };
 
@@ -14,12 +15,29 @@ type Categorizable = {
 };
 
 export async function fetchRules(): Promise<Rule[]> {
-  const { data, error } = await supabase
+  const baseQuery = supabase
     .from("rules")
-    .select<Rule>("id, pattern, category, enabled")
+    .select<Rule>("id, pattern, category, budget_category, enabled")
     .order("created_at", { ascending: true });
-  if (error) throw error;
-  return data ?? [];
+  const { data, error } = await baseQuery;
+  if (!error) return data ?? [];
+
+  const missingColumn =
+    typeof error.message === "string" &&
+    /budget_category/i.test(error.message || "");
+  if (!missingColumn) {
+    throw error;
+  }
+
+  const fallback = await supabase
+    .from("rules")
+    .select("id, pattern, category, enabled")
+    .order("created_at", { ascending: true });
+  if (fallback.error) throw fallback.error;
+  return (fallback.data ?? []).map((row: any) => ({
+    ...row,
+    budget_category: null,
+  }));
 }
 
 const patternCache = new Map<string, { raw: string; normalized: string }>();
@@ -38,9 +56,10 @@ function normalizedPattern(rule: Rule): string {
   return normalized;
 }
 
-export function applyRuleCategory<Row extends Categorizable>(
+function applyRuleField<Row extends Categorizable>(
   row: Row,
-  rules: Rule[]
+  rules: Rule[],
+  field: "category" | "budget_category",
 ): string | "" {
   if (!rules.length) return "";
   const normalizedFields: Record<keyof Categorizable, string> = {
@@ -49,14 +68,32 @@ export function applyRuleCategory<Row extends Categorizable>(
   };
   const fieldValues = Object.values(normalizedFields);
   for (const rule of rules) {
+    const value = (rule as Record<string, unknown>)[field];
+    if (!value || typeof value !== "string") continue;
     const pattern = normalizedPattern(rule);
     if (!pattern) continue;
-    const matched = fieldValues.some((value) => value.includes(pattern));
+    const matched = fieldValues.some((fieldValue) =>
+      fieldValue.includes(pattern),
+    );
     if (matched) {
-      return rule.category;
+      return value;
     }
   }
   return "";
+}
+
+export function applyRuleCategory<Row extends Categorizable>(
+  row: Row,
+  rules: Rule[],
+): string | "" {
+  return applyRuleField(row, rules, "category");
+}
+
+export function applyRuleBudgetCategory<Row extends Categorizable>(
+  row: Row,
+  rules: Rule[],
+): string | "" {
+  return applyRuleField(row, rules, "budget_category");
 }
 
 export function normalize(value: unknown): string {
