@@ -6,7 +6,7 @@
     <header class="space-y-2">
         <h2 class="text-xl font-semibold text-slate-900">Transactions</h2>
         <p class="text-sm text-slate-600">
-            Filtre par mois, catégorie et recherche.
+            Filtre par mois, catégorie, importance et recherche.
         </p>
     </header>
 
@@ -43,6 +43,19 @@
                     id="tx-filter-search"
                     type="text"
                     placeholder="description ou contrepartie"
+                    class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
+                />
+            </div>
+            <div class="flex-1 space-y-1">
+                <label
+                    for="tx-filter-meta"
+                    class="text-xs font-medium text-slate-600"
+                    >Catégorie / importance</label
+                >
+                <input
+                    id="tx-filter-meta"
+                    type="text"
+                    placeholder="catégorie ou importance"
                     class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900"
                 />
             </div>

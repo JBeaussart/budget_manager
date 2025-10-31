@@ -1,6 +1,7 @@
 import {
   applyRuleBudgetCategory,
   applyRuleCategory,
+  normalize,
   type Rule,
 } from "../lib/rules";
 import { supabase } from "../lib/supabase";
@@ -33,7 +34,10 @@ const BUDGET_ROW_CLASS_MAP: Record<string, string> = {
 };
 const BUDGET_ROW_CLASS_VALUES = Object.values(BUDGET_ROW_CLASS_MAP);
 
-function applyBudgetHighlight(element: HTMLElement, budget: string | null | undefined) {
+function applyBudgetHighlight(
+  element: HTMLElement,
+  budget: string | null | undefined,
+) {
   if (!element) return;
   if (BUDGET_ROW_CLASS_VALUES.length) {
     element.classList.remove(...BUDGET_ROW_CLASS_VALUES);
@@ -56,6 +60,9 @@ const catSelect = document.getElementById(
 ) as HTMLSelectElement | null;
 const searchInput = document.getElementById(
   "tx-filter-search",
+) as HTMLInputElement | null;
+const metaSearchInput = document.getElementById(
+  "tx-filter-meta",
 ) as HTMLInputElement | null;
 const applyBtn = document.getElementById(
   "tx-apply",
@@ -148,6 +155,8 @@ async function fetchPage(opts: { append?: boolean } = {}) {
   const [start, end] = rangeStartEnd();
   const category = (catSelect?.value || "").trim();
   const search = (searchInput?.value || "").trim();
+  const metaSearch = (metaSearchInput?.value || "").trim();
+  const metaTerm = metaSearch ? normalize(metaSearch) : "";
 
   const from = page * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
@@ -190,7 +199,7 @@ async function fetchPage(opts: { append?: boolean } = {}) {
   }
 
   const loadedBefore = tbody.querySelectorAll("tr").length;
-  const loadedAfter = loadedBefore + (data?.length || 0);
+  let appendedCount = 0;
 
   const categoryRules = rules.filter(
     (rule) => rule.enabled && rule.pattern && rule.category,
@@ -370,6 +379,14 @@ async function fetchPage(opts: { append?: boolean } = {}) {
       budgetTd.appendChild(budgetSelect);
     }
 
+    if (metaTerm) {
+      const categoryMatch = normalize(row.category).includes(metaTerm);
+      const budgetMatch = normalize(row.budget_category).includes(metaTerm);
+      if (!categoryMatch && !budgetMatch) {
+        continue;
+      }
+    }
+
     // Delete button in actions column
     const delBtn = document.createElement("button");
     delBtn.type = "button";
@@ -404,6 +421,7 @@ async function fetchPage(opts: { append?: boolean } = {}) {
     actionsTd.appendChild(delBtn);
 
     tbody.appendChild(tr);
+    appendedCount += 1;
   }
 
   // Populate categories from the current loaded set if select has only default
@@ -428,7 +446,11 @@ async function fetchPage(opts: { append?: boolean } = {}) {
   }
 
   setFeedback("");
+  const loadedAfter = loadedBefore + appendedCount;
   setStats(loadedAfter);
+  if (metaTerm && stats) {
+    stats.textContent = `${loadedAfter} lignes (filtre local catégorie/importance)`;
+  }
   renderPagination();
 }
 
@@ -443,6 +465,7 @@ resetBtn?.addEventListener("click", () => {
   if (endInput) endInput.value = "";
   if (catSelect) catSelect.value = "";
   if (searchInput) searchInput.value = "";
+  if (metaSearchInput) metaSearchInput.value = "";
   applyFilters(true);
 });
 
